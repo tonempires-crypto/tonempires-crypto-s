@@ -17,6 +17,8 @@ export default function AppProviders({ children }: { children: React.ReactNode }
         tg.expand();
         
         const user = tg.initDataUnsafe?.user;
+        const startParam = tg.initDataUnsafe?.start_param; // Captured from ?startapp=...
+
         if (user) {
           // Zero-Click Registration / Auto-Save Logic
           const { data, error } = await supabase
@@ -26,11 +28,14 @@ export default function AppProviders({ children }: { children: React.ReactNode }
             .single();
 
           if (!data && !error) {
-            // User doesn't exist, create row
+            // New user registration
+            const referralInfo = startParam ? parseInt(startParam) : null;
+            
             await supabase.from('users').insert({
               telegram_id: user.id,
               username: user.username || `User_${user.id}`,
               ton_balance: 0,
+              referred_by: referralInfo, // Linking the referral
               created_at: new Date().toISOString(),
               last_login: new Date().toISOString(),
             });
