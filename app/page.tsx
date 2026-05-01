@@ -1,0 +1,149 @@
+'use client';
+
+import { TonConnectButton } from '@tonconnect/ui-react';
+import { Wallet, Settings, TrendingUp, Map as MapIcon, ChevronRight, Zap } from 'lucide-react';
+import { motion } from 'motion/react';
+import Image from 'next/image';
+import { useEffect, useState } from 'react';
+
+export default function Dashboard() {
+  const [userName, setUserName] = useState('jdoe_trading');
+  const [citizenId, setCitizenId] = useState('8421');
+  
+  useEffect(() => {
+    // @ts-ignore
+    const tg = window.Telegram?.WebApp;
+    if (tg?.initDataUnsafe?.user) {
+      setUserName(tg.initDataUnsafe.user.username || tg.initDataUnsafe.user.first_name);
+      setCitizenId(tg.initDataUnsafe.user.id.toString().slice(-4));
+    }
+  }, []);
+
+  const regions = [
+    { name: 'MIDDLE EAST', currency: 'BTM', price: '1.42', change: '+12.4%', color: 'border-accent-cyan/40 bg-accent-cyan/10' },
+    { name: 'AFRICA', currency: 'BTF', price: '0.64', change: '-2.1%', color: 'border-border-secondary' },
+    { name: 'EUROPE', currency: 'BTE', price: '2.15', change: '+2.1%', color: 'border-border-secondary' },
+    { name: 'ASIA', currency: 'BTA', price: '0.88', change: '-4.2%', color: 'border-border-secondary' },
+    { name: 'EAST ASIA', currency: 'BTR', price: '1.04', change: '0.0%', color: 'border-border-secondary' },
+  ];
+
+  return (
+    <div className="p-6 space-y-6">
+      {/* Header Profile */}
+      <header className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accent-cyan to-accent-blue border border-accent-cyan/30 flex items-center justify-center font-bold text-black uppercase">
+            {userName.slice(0, 2)}
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[10px] text-gray-500 font-mono uppercase tracking-widest leading-none mb-1">Citizen #{citizenId}</span>
+            <span className="text-sm font-semibold tracking-tight">@{userName}</span>
+          </div>
+        </div>
+        <div className="bg-[#151518] border border-border-main px-3 py-1.5 rounded-xl flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-accent-cyan animate-pulse"></div>
+          <span className="text-[10px] uppercase font-bold tracking-tighter">Live Network</span>
+        </div>
+      </header>
+
+      {/* Vault Balance Card */}
+      <motion.div 
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="tech-card space-y-4"
+      >
+        <div className="flex justify-between items-end">
+          <div className="flex flex-col">
+            <span className="text-[10px] text-gray-500 uppercase tracking-widest font-mono mb-1">Vault Balance</span>
+            <span className="text-2xl font-black text-accent-orange tracking-tight">1,248.50 TON</span>
+          </div>
+          <div className="flex gap-2">
+            <button className="bg-accent-orange text-black text-[10px] font-bold px-3 py-2 rounded-lg hover:brightness-110 active:scale-95 transition-all">DEPOSIT</button>
+            <button className="border border-border-secondary text-white text-[10px] font-bold px-3 py-2 rounded-lg hover:bg-white/5 active:scale-95 transition-all">OUT</button>
+          </div>
+        </div>
+        
+        {/* Resource Items */}
+        <div className="grid grid-cols-4 gap-2 pt-3 border-t border-border-main">
+          <div className="text-center">
+            <div className="text-[9px] text-gray-600 mb-1">OIL</div>
+            <div className="text-xs font-mono text-accent-cyan">45k</div>
+          </div>
+          <div className="text-center">
+            <div className="text-[9px] text-gray-600 mb-1">GLD</div>
+            <div className="text-xs font-mono text-accent-cyan">1.2k</div>
+          </div>
+          <div className="text-center">
+            <div className="text-[9px] text-gray-600 mb-1">IRN</div>
+            <div className="text-xs font-mono text-accent-cyan">890</div>
+          </div>
+          <div className="text-center">
+            <div className="text-[9px] text-gray-600 mb-1">WHT</div>
+            <div className="text-xs font-mono text-accent-cyan">12k</div>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Market Quotations */}
+      <section className="space-y-4">
+        <div className="flex justify-between items-center">
+          <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500">Economic Zones</h3>
+          <span className="text-[10px] text-accent-cyan font-mono opacity-80">Market v2.4</span>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-3">
+          {regions.slice(0, 4).map((region, i) => (
+            <motion.div
+              key={region.name}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: i * 0.05 }}
+              className="bg-[#111114] border border-border-main p-3 rounded-2xl relative overflow-hidden group"
+            >
+              <div className="text-[9px] text-gray-500 font-mono mb-1">{region.currency} - {region.name}</div>
+              <div className="text-lg font-bold">{region.price} TON</div>
+              <div className={`text-[9px] font-mono ${region.change.startsWith('+') ? 'text-emerald-500' : region.change === '0.0%' ? 'text-gray-400' : 'text-red-500'}`}>
+                {region.change}
+              </div>
+              <div className="absolute -right-2 -bottom-2 w-12 h-12 border border-border-secondary rounded-full opacity-10 group-hover:opacity-20 transition-opacity"></div>
+            </motion.div>
+          ))}
+        </div>
+
+        {/* Africa Special Row */}
+        <div className="bg-[#111114] border border-border-main p-3 rounded-2xl flex items-center justify-between">
+          <div className="flex flex-col">
+            <div className="text-[9px] text-gray-500 font-mono mb-1">BTF - AFRICA</div>
+            <div className="text-lg font-bold">0.64 TON</div>
+          </div>
+          <div className="flex gap-1 items-end">
+            <div className="w-1 h-3 bg-border-secondary"></div>
+            <div className="w-1 h-5 bg-accent-cyan/60"></div>
+            <div className="w-1 h-2 bg-border-secondary"></div>
+            <div className="w-1 h-4 bg-accent-cyan"></div>
+            <div className="w-1 h-6 bg-accent-cyan/80"></div>
+          </div>
+        </div>
+      </section>
+
+      {/* Strategic Map View */}
+      <section className="space-y-4 pb-8">
+        <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500">Strategic Map</h3>
+        <div className="grid grid-cols-5 gap-1.5 h-16">
+          {regions.map((region, i) => (
+            <div 
+              key={region.currency}
+              className={`rounded-lg border flex items-center justify-center text-[9px] font-bold transition-all
+                ${region.name === 'MIDDLE EAST' 
+                  ? 'bg-accent-cyan/10 border-accent-cyan/40 text-accent-cyan shadow-[0_0_10px_rgba(0,255,209,0.2)]' 
+                  : 'bg-[#151518] border-border-secondary text-gray-600'
+                }`}
+            >
+              {region.currency}
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}

@@ -1,0 +1,63 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-mono), ui-monospace, SFMono-Regular, monospace;
+  
+  --color-accent-cyan: #00FFD1;
+  --color-accent-blue: #0082FF;
+  --color-accent-orange: #F27D26;
+  --color-industrial-bg: #050505;
+  --color-industrial-card: #0A0A0B;
+  --color-border-main: #222222;
+  --color-border-secondary: #333333;
+}
+
+@layer base {
+  body {
+    @apply bg-industrial-bg text-[#E0E0E0];
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+}
+
+@layer components {
+  .bento-card {
+    @apply bg-industrial-card border border-border-main rounded-2xl overflow-hidden relative transition-all duration-300;
+  }
+  
+  .tech-card {
+    @apply bg-gradient-to-br from-[#1A1A1D] to-[#111] border border-border-secondary p-5 rounded-[24px] shadow-lg;
+  }
+  
+  .neon-text-cyan {
+    @apply text-accent-cyan tracking-tight;
+    text-shadow: 0 0 12px rgba(0, 255, 209, 0.3);
+  }
+  
+  .industrial-grid {
+    background-image: 
+      linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+
+  .nav-item-active {
+    @apply text-accent-cyan opacity-100;
+  }
+  
+  .nav-item-inactive {
+    @apply text-white opacity-40;
+  }
+}
+
+/* Custom scrollbar for mobile */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: #000;
+}
+::-webkit-scrollbar-thumb {
+  background: #222;
+  border-radius: 10px;
+}
