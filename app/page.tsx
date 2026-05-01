@@ -95,12 +95,12 @@ export default function Dashboard() {
             {/* Header Profile */}
             <header className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accent-cyan to-accent-blue border border-accent-cyan/30 flex items-center justify-center font-bold text-black uppercase">
-                  {userName.slice(0, 2)}
+                <div className="w-10 h-10 shrink-0 rounded-full bg-gradient-to-tr from-accent-cyan to-accent-blue border border-accent-cyan/30 flex items-center justify-center font-bold text-black uppercase">
+                  {userName ? userName.slice(0, 2) : '??'}
                 </div>
-                <div className="flex flex-col">
+                <div className="flex flex-col min-w-0">
                   <span className="text-[10px] text-gray-500 font-mono uppercase tracking-widest leading-none mb-1">Citizen #{citizenId}</span>
-                  <span className="text-sm font-semibold tracking-tight">@{userName}</span>
+                  <span className="text-sm font-semibold tracking-tight truncate">@{userName || 'Citizen'}</span>
                 </div>
               </div>
               <div className="bg-[#151518] border border-border-main px-3 py-1.5 rounded-xl flex items-center gap-2">

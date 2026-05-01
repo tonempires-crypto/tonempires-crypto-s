@@ -36,7 +36,7 @@ export default function RootLayout({
         className={`${inter.variable} ${jetbrainsMono.variable} antialiased bg-industrial-bg text-[#E0E0E0] overflow-hidden flex items-center justify-center min-h-screen`}
       >
         <AppProviders>
-          <main className="w-[375px] h-[720px] bg-industrial-card border border-border-main rounded-[40px] shadow-2xl relative flex flex-col overflow-hidden">
+          <main className="min-h-screen w-full bg-industrial-bg relative flex flex-col overflow-hidden max-w-md mx-auto">
             {children}
           </main>
         </AppProviders>
