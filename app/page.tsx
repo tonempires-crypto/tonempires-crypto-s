@@ -38,10 +38,17 @@ export default function Dashboard() {
 
         if (data) {
           setUserData(data);
+          // If user exists but has no region, show selector
           if (!data.region) {
             setShowRegionSelector(true);
           }
+        } else {
+          // New user not in DB yet (AppProviders handles creation, but we show selector)
+          setShowRegionSelector(true);
         }
+      } else {
+        // Fallback for development if not in TG
+        // setShowRegionSelector(true);
       }
       setLoading(false);
     };
@@ -49,7 +56,13 @@ export default function Dashboard() {
     initUser();
   }, []);
 
+  const triggerHaptic = () => {
+    // @ts-ignore
+    window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('medium');
+  };
+
   const handleRegionSelect = async (regionId: string) => {
+    triggerHaptic();
     // @ts-ignore
     const tg = window.Telegram?.WebApp;
     const user = tg?.initDataUnsafe?.user;
@@ -62,8 +75,10 @@ export default function Dashboard() {
 
       if (!error) {
         setShowRegionSelector(false);
-        // Refresh local data if needed
       }
+    } else {
+      // Dev fallback
+      setShowRegionSelector(false);
     }
   };
 
@@ -121,29 +136,39 @@ export default function Dashboard() {
                   <span className="text-2xl font-black text-accent-orange tracking-tight">1,248.50 TON</span>
                 </div>
                 <div className="flex gap-2">
-                  <button className="bg-accent-orange text-black text-[10px] font-bold px-3 py-2 rounded-lg hover:brightness-110 active:scale-95 transition-all">DEPOSIT</button>
-                  <button className="border border-border-secondary text-white text-[10px] font-bold px-3 py-2 rounded-lg hover:bg-white/5 active:scale-95 transition-all">OUT</button>
+                  <button 
+                    onClick={triggerHaptic}
+                    className="bg-accent-orange text-black text-[10px] font-bold px-3 py-2 rounded-lg hover:after:content-[''] hover:brightness-110 active:scale-90 transition-all shadow-[0_0_15px_rgba(255,145,0,0.3)]"
+                  >
+                    DEPOSIT
+                  </button>
+                  <button 
+                    onClick={triggerHaptic}
+                    className="border border-border-secondary text-white text-[10px] font-bold px-3 py-2 rounded-lg hover:bg-white/5 active:scale-90 transition-all"
+                  >
+                    OUT
+                  </button>
                 </div>
               </div>
               
               {/* Resource Items */}
               <div className="grid grid-cols-4 gap-2 pt-3 border-t border-border-main">
-                <div className="text-center">
-                  <div className="text-[9px] text-gray-600 mb-1">OIL</div>
+                <button onClick={triggerHaptic} className="text-center group active:scale-95 transition-transform">
+                  <div className="text-[9px] text-gray-600 mb-1 group-hover:text-zinc-400 transition-colors">OIL</div>
                   <div className="text-xs font-mono text-accent-cyan">45k</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-[9px] text-gray-600 mb-1">GLD</div>
+                </button>
+                <button onClick={triggerHaptic} className="text-center group active:scale-95 transition-transform">
+                  <div className="text-[9px] text-gray-600 mb-1 group-hover:text-zinc-400 transition-colors">GLD</div>
                   <div className="text-xs font-mono text-accent-cyan">1.2k</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-[9px] text-gray-600 mb-1">IRN</div>
+                </button>
+                <button onClick={triggerHaptic} className="text-center group active:scale-95 transition-transform">
+                  <div className="text-[9px] text-gray-600 mb-1 group-hover:text-zinc-400 transition-colors">IRN</div>
                   <div className="text-xs font-mono text-accent-cyan">890</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-[9px] text-gray-600 mb-1">WHT</div>
+                </button>
+                <button onClick={triggerHaptic} className="text-center group active:scale-95 transition-transform">
+                  <div className="text-[9px] text-gray-600 mb-1 group-hover:text-zinc-400 transition-colors">WHT</div>
                   <div className="text-xs font-mono text-accent-cyan">12k</div>
-                </div>
+                </button>
               </div>
             </motion.div>
 
@@ -151,25 +176,26 @@ export default function Dashboard() {
             <section className="space-y-4">
               <div className="flex justify-between items-center">
                 <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500">Economic Zones</h3>
-                <span className="text-[10px] text-accent-cyan font-mono opacity-80">Market v2.4</span>
+                <button onClick={() => { setActiveTab('market'); triggerHaptic(); }} className="text-[10px] text-accent-cyan font-mono opacity-80 hover:opacity-100 transition-opacity">VIEW ALL</button>
               </div>
               
               <div className="grid grid-cols-2 gap-3">
                 {regions.slice(0, 4).map((region, i) => (
-                  <motion.div
+                  <motion.button
                     key={region.name}
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: i * 0.05 }}
-                    className="bg-[#111114] border border-border-main p-3 rounded-2xl relative overflow-hidden group"
+                    onClick={() => { setActiveTab('market'); triggerHaptic(); }}
+                    className="bg-[#111114] border border-border-main p-3 rounded-2xl relative overflow-hidden group text-left active:scale-95 transition-all"
                   >
                     <div className="text-[9px] text-gray-500 font-mono mb-1">{region.currency} - {region.name}</div>
-                    <div className="text-lg font-bold">{region.price} TON</div>
+                    <div className="text-lg font-bold group-hover:text-accent-cyan transition-colors">{region.price} TON</div>
                     <div className={`text-[9px] font-mono ${region.change.startsWith('+') ? 'text-emerald-500' : region.change === '0.0%' ? 'text-gray-400' : 'text-red-500'}`}>
                       {region.change}
                     </div>
-                    <div className="absolute -right-2 -bottom-2 w-12 h-12 border border-border-secondary rounded-full opacity-10 group-hover:opacity-20 transition-opacity"></div>
-                  </motion.div>
+                    <div className="absolute -right-2 -bottom-2 w-12 h-12 border border-border-secondary rounded-full opacity-5 group-hover:opacity-20 transition-opacity"></div>
+                  </motion.button>
                 ))}
               </div>
 
@@ -216,41 +242,41 @@ export default function Dashboard() {
       </div>
 
       {/* Navigation Bar */}
-      <nav className="h-20 bg-industrial-card border-t border-border-main flex items-center justify-around px-4 shrink-0">
+      <nav className="h-24 pb-6 bg-industrial-card border-t border-border-main flex items-center justify-around px-4 shrink-0 z-50">
         <button 
-          onClick={() => setActiveTab('dash')}
-          className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'dash' ? 'nav-item-active' : 'nav-item-inactive'}`}
+          onClick={() => { setActiveTab('dash'); triggerHaptic(); }}
+          className={`group flex flex-col items-center gap-1 transition-all active:scale-90 ${activeTab === 'dash' ? 'text-accent-cyan' : 'text-zinc-500'}`}
         >
-          <div className={`w-5 h-5 rounded-sm transition-all ${activeTab === 'dash' ? 'bg-accent-cyan shadow-[0_0_10px_rgba(0,255,209,0.4)]' : 'border border-white/40'}`}></div>
-          <span className="text-[9px] font-bold">DASH</span>
+          <div className={`w-5 h-5 rounded-sm transition-all duration-300 ${activeTab === 'dash' ? 'bg-accent-cyan shadow-[0_0_15px_rgba(0,255,209,0.6)]' : 'border border-zinc-600'}`}></div>
+          <span className="text-[9px] font-bold tracking-tighter">DASH</span>
         </button>
         <button 
-          onClick={() => setActiveTab('market')}
-          className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'market' ? 'nav-item-active' : 'nav-item-inactive'}`}
+          onClick={() => { setActiveTab('market'); triggerHaptic(); }}
+          className={`group flex flex-col items-center gap-1 transition-all active:scale-90 ${activeTab === 'market' ? 'text-accent-cyan' : 'text-zinc-500'}`}
         >
-          <div className={`w-5 h-5 rounded-sm transition-all ${activeTab === 'market' ? 'bg-accent-cyan shadow-[0_0_10px_rgba(0,255,209,0.4)]' : 'border border-white/40'}`}></div>
-          <span className="text-[9px]">MARKET</span>
+          <div className={`w-5 h-5 rounded-sm transition-all duration-300 ${activeTab === 'market' ? 'bg-accent-cyan shadow-[0_0_15px_rgba(0,255,209,0.6)]' : 'border border-zinc-600'}`}></div>
+          <span className="text-[9px] font-bold tracking-tighter">MARKET</span>
         </button>
         <button 
-          onClick={() => setActiveTab('trade')}
-          className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'trade' ? 'nav-item-active' : 'nav-item-inactive'}`}
+          onClick={() => { setActiveTab('trade'); triggerHaptic(); }}
+          className={`group flex flex-col items-center gap-1 transition-all active:scale-90 ${activeTab === 'trade' ? 'text-accent-cyan' : 'text-zinc-500'}`}
         >
-          <div className={`w-5 h-5 rounded-sm transition-all ${activeTab === 'trade' ? 'bg-accent-cyan shadow-[0_0_10px_rgba(0,255,209,0.4)]' : 'border border-white/40'}`}></div>
-          <span className="text-[9px]">TRADE</span>
+          <div className={`w-5 h-5 rounded-sm transition-all duration-300 ${activeTab === 'trade' ? 'bg-accent-cyan shadow-[0_0_15px_rgba(0,255,209,0.6)]' : 'border border-zinc-600'}`}></div>
+          <span className="text-[9px] font-bold tracking-tighter">TRADE</span>
         </button>
         <button 
-          onClick={() => setActiveTab('tasks')}
-          className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'tasks' ? 'nav-item-active' : 'nav-item-inactive'}`}
+          onClick={() => { setActiveTab('tasks'); triggerHaptic(); }}
+          className={`group flex flex-col items-center gap-1 transition-all active:scale-90 ${activeTab === 'tasks' ? 'text-accent-cyan' : 'text-zinc-500'}`}
         >
-          <div className={`w-5 h-5 rounded-sm transition-all ${activeTab === 'tasks' ? 'bg-accent-cyan shadow-[0_0_10px_rgba(0,255,209,0.4)]' : 'border border-white/40'}`}></div>
-          <span className="text-[9px]">TASKS</span>
+          <div className={`w-5 h-5 rounded-sm transition-all duration-300 ${activeTab === 'tasks' ? 'bg-accent-cyan shadow-[0_0_15px_rgba(0,255,209,0.6)]' : 'border border-zinc-600'}`}></div>
+          <span className="text-[9px] font-bold tracking-tighter">TASKS</span>
         </button>
         <button 
-          onClick={() => setActiveTab('invite')}
-          className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'invite' ? 'nav-item-active' : 'nav-item-inactive'}`}
+          onClick={() => { setActiveTab('invite'); triggerHaptic(); }}
+          className={`group flex flex-col items-center gap-1 transition-all active:scale-90 ${activeTab === 'invite' ? 'text-accent-cyan' : 'text-zinc-500'}`}
         >
-          <div className={`w-5 h-5 rounded-sm transition-all ${activeTab === 'invite' ? 'bg-accent-cyan shadow-[0_0_10px_rgba(0,255,209,0.4)]' : 'border border-white/40'}`}></div>
-          <span className="text-[9px]">INVITE</span>
+          <div className={`w-5 h-5 rounded-sm transition-all duration-300 ${activeTab === 'invite' ? 'bg-accent-cyan shadow-[0_0_15px_rgba(0,255,209,0.6)]' : 'border border-zinc-600'}`}></div>
+          <span className="text-[9px] font-bold tracking-tighter">INVITE</span>
         </button>
       </nav>
     </div>
