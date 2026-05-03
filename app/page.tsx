@@ -17,7 +17,18 @@ export default function Dashboard() {
   const [showRegionSelector, setShowRegionSelector] = useState(false);
   const [userData, setUserData] = useState<any>(null);
   const [activeTab, setActiveTab] = useState('dash');
+  const [resources, setResources] = useState({ oil: 0, gold: 0, iron: 0, wheat: 0, ton: 0 });
   
+  // Regional modifiers mapping
+  const getModifiers = (region: string) => {
+    const mods = { oil: 1, gold: 1, iron: 1, wheat: 1 };
+    if (region === 'middle_east') mods.oil = 2.5; // High oil yield
+    if (region === 'asia') mods.gold = 2.0;       // Industry hub
+    if (region === 'africa') mods.iron = 2.2;     // Resource rich
+    if (region === 'europe') mods.wheat = 2.1;    // Agricultural base
+    return mods;
+  };
+
   useEffect(() => {
     const initUser = async () => {
       // @ts-ignore
@@ -29,32 +40,81 @@ export default function Dashboard() {
         setCitizenId(user.id.toString().slice(-4));
         setFullUserId(user.id);
 
-        // Check if user exists in Supabase
         const { data, error } = await supabase
           .from('users')
-          .select('*')
-          .eq('telegram_id', user.id)
+          .upsert({
+            telegram_id: user.id,
+            username: user.username || `User_${user.id}`,
+            last_login: new Date().toISOString(),
+          }, { 
+            onConflict: 'telegram_id',
+            ignoreDuplicates: false 
+          })
+          .select()
           .single();
 
         if (data) {
           setUserData(data);
-          // If user exists but has no region, show selector
+          
+          // Calculate Passive Income since last login
+          const now = new Date();
+          const lastLogin = new Date(data.last_login || data.created_at || now);
+          const diffSeconds = Math.max(0, (now.getTime() - lastLogin.getTime()) / 1000);
+          
+          // Base rate: 0.01 units per second
+          const baseRate = 0.01;
+          const mods = getModifiers(data.region || '');
+          const gain = diffSeconds * baseRate;
+
+          const updatedResources = {
+            oil: (data.oil || 0) + (gain * mods.oil),
+            gold: (data.gold || 0) + (gain * mods.gold),
+            iron: (data.iron || 0) + (gain * mods.iron),
+            wheat: (data.wheat || 0) + (gain * mods.wheat),
+            ton: data.ton_balance || 0
+          };
+
+          setResources(updatedResources);
+
+          // Update DB with the harvested resources
+          await supabase.from('users').update({
+            oil: updatedResources.oil,
+            gold: updatedResources.gold,
+            iron: updatedResources.iron,
+            wheat: updatedResources.wheat,
+            last_login: now.toISOString()
+          }).eq('telegram_id', user.id);
+
           if (!data.region) {
             setShowRegionSelector(true);
           }
-        } else {
-          // New user not in DB yet (AppProviders handles creation, but we show selector)
-          setShowRegionSelector(true);
         }
-      } else {
-        // Fallback for development if not in TG
-        // setShowRegionSelector(true);
       }
       setLoading(false);
     };
 
     initUser();
   }, []);
+
+  // Live Ticker Logic
+  useEffect(() => {
+    if (!userData || showRegionSelector) return;
+
+    const interval = setInterval(() => {
+      const mods = getModifiers(userData.region || '');
+      const rate = 0.01; // 0.01 units per second
+
+      setResources(prev => ({
+        ...prev,
+        oil: prev.oil + (rate * mods.oil),
+        gold: prev.gold + (rate * mods.gold),
+        iron: prev.iron + (rate * mods.iron),
+        wheat: prev.wheat + (rate * mods.wheat),
+      }));
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [userData, showRegionSelector]);
 
   const triggerHaptic = () => {
     // @ts-ignore
@@ -68,6 +128,7 @@ export default function Dashboard() {
     const user = tg?.initDataUnsafe?.user;
 
     if (user) {
+      // Persist region selection
       const { error } = await supabase
         .from('users')
         .update({ region: regionId })
@@ -75,6 +136,10 @@ export default function Dashboard() {
 
       if (!error) {
         setShowRegionSelector(false);
+        // Update local state to prevent re-triggering logic
+        setUserData((prev: any) => ({ ...prev, region: regionId }));
+      } else {
+        console.error("Error saving region:", error);
       }
     } else {
       // Dev fallback
@@ -133,7 +198,9 @@ export default function Dashboard() {
               <div className="flex justify-between items-end">
                 <div className="flex flex-col">
                   <span className="text-[10px] text-gray-500 uppercase tracking-widest font-mono mb-1">Vault Balance</span>
-                  <span className="text-2xl font-black text-accent-orange tracking-tight">1,248.50 TON</span>
+                  <span className="text-2xl font-black text-accent-orange tracking-tight">
+                    {resources.ton.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TON
+                  </span>
                 </div>
                 <div className="flex gap-2">
                   <button 
@@ -155,19 +222,19 @@ export default function Dashboard() {
               <div className="grid grid-cols-4 gap-2 pt-3 border-t border-border-main">
                 <button onClick={triggerHaptic} className="text-center group active:scale-95 transition-transform">
                   <div className="text-[9px] text-gray-600 mb-1 group-hover:text-zinc-400 transition-colors">OIL</div>
-                  <div className="text-xs font-mono text-accent-cyan">45k</div>
+                  <div className="text-xs font-mono text-accent-cyan">{resources.oil.toFixed(1)}</div>
                 </button>
                 <button onClick={triggerHaptic} className="text-center group active:scale-95 transition-transform">
                   <div className="text-[9px] text-gray-600 mb-1 group-hover:text-zinc-400 transition-colors">GLD</div>
-                  <div className="text-xs font-mono text-accent-cyan">1.2k</div>
+                  <div className="text-xs font-mono text-accent-cyan">{resources.gold.toFixed(1)}</div>
                 </button>
                 <button onClick={triggerHaptic} className="text-center group active:scale-95 transition-transform">
                   <div className="text-[9px] text-gray-600 mb-1 group-hover:text-zinc-400 transition-colors">IRN</div>
-                  <div className="text-xs font-mono text-accent-cyan">890</div>
+                  <div className="text-xs font-mono text-accent-cyan">{resources.iron.toFixed(1)}</div>
                 </button>
                 <button onClick={triggerHaptic} className="text-center group active:scale-95 transition-transform">
                   <div className="text-[9px] text-gray-600 mb-1 group-hover:text-zinc-400 transition-colors">WHT</div>
-                  <div className="text-xs font-mono text-accent-cyan">12k</div>
+                  <div className="text-xs font-mono text-accent-cyan">{resources.wheat.toFixed(1)}</div>
                 </button>
               </div>
             </motion.div>

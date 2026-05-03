@@ -20,32 +20,19 @@ export default function AppProviders({ children }: { children: React.ReactNode }
         const startParam = tg.initDataUnsafe?.start_param; // Captured from ?startapp=...
 
         if (user) {
-          // Zero-Click Registration / Auto-Save Logic
-          const { data, error } = await supabase
-            .from('users')
-            .select('*')
-            .eq('telegram_id', user.id)
-            .single();
-
-          if (!data && !error) {
-            // New user registration
-            const referralInfo = startParam ? parseInt(startParam) : null;
-            
-            await supabase.from('users').insert({
-              telegram_id: user.id,
-              username: user.username || `User_${user.id}`,
-              ton_balance: 0,
-              referred_by: referralInfo, // Linking the referral
-              created_at: new Date().toISOString(),
-              last_login: new Date().toISOString(),
-            });
-          } else if (data) {
-            // Update last login
-            await supabase
-              .from('users')
-              .update({ last_login: new Date().toISOString() })
-              .eq('telegram_id', user.id);
-          }
+          // Zero-Click Registration / Auto-Save Logic using upsert
+          const referralInfo = startParam ? parseInt(startParam) : null;
+          
+          await supabase.from('users').upsert({
+            telegram_id: user.id,
+            username: user.username || `User_${user.id}`,
+            ton_balance: 0,
+            referred_by: referralInfo,
+            last_login: new Date().toISOString(),
+          }, { 
+            onConflict: 'telegram_id',
+            ignoreDuplicates: false 
+          });
         }
       }
       setIsLoaded(true);
