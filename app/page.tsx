@@ -23,6 +23,8 @@ export default function Dashboard() {
   const [userData, setUserData] = useState<any>(null);
   const [activeTab, setActiveTab] = useState('dash');
   const [resources, setResources] = useState({ oil: 0, gold: 0, iron: 0, wheat: 0, ton: 0 });
+  const [pendingResources, setPendingResources] = useState({ oil: 0, gold: 0, iron: 0, wheat: 0 });
+  const [lastClaimTime, setLastClaimTime] = useState<string>('');
   const [referralCount, setReferralCount] = useState(0);
   
   // Regional modifiers mapping
@@ -82,6 +84,7 @@ export default function Dashboard() {
 
         if (data) {
           setUserData(data);
+          setLastClaimTime(data.last_claim || data.created_at);
           
           // Fetch referral count for boost
           const { count } = await supabase
@@ -91,34 +94,30 @@ export default function Dashboard() {
           const currentReferralCount = count || 0;
           setReferralCount(currentReferralCount);
 
-          // Calculate Passive Income since last login
+          // Calculate Pending Resources since last claim
           const now = new Date();
-          const lastLogin = new Date(data.last_login || data.created_at || now);
-          const diffSeconds = Math.max(0, (now.getTime() - lastLogin.getTime()) / 1000);
+          const lastClaim = new Date(data.last_claim || data.created_at || now);
+          const diffSeconds = Math.max(0, (now.getTime() - lastClaim.getTime()) / 1000);
           
           const rates = getMiningRates(data.region || '');
           const boost = 1 + (currentReferralCount * 0.05); // 5% boost per referral
           
-          const updatedResources = {
-            oil: (data.oil || 0) + (diffSeconds * rates.oil * boost),
-            gold: (data.gold || 0) + (diffSeconds * rates.gold * boost),
-            iron: (data.iron || 0) + (diffSeconds * rates.iron * boost),
-            wheat: (data.wheat || 0) + (diffSeconds * rates.wheat * boost),
+          setPendingResources({
+            oil: diffSeconds * rates.oil * boost,
+            gold: diffSeconds * rates.gold * boost,
+            iron: diffSeconds * rates.iron * boost,
+            wheat: diffSeconds * rates.wheat * boost,
+          });
+
+          setResources({
+            oil: data.oil || 0,
+            gold: data.gold || 0,
+            iron: data.iron || 0,
+            wheat: data.wheat || 0,
             ton: data.ton_balance || 0
-          };
+          });
 
-          setResources(updatedResources);
-
-          // Update DB with the harvested resources
-          await supabase.from('users').update({
-            oil: updatedResources.oil,
-            gold: updatedResources.gold,
-            iron: updatedResources.iron,
-            wheat: updatedResources.wheat,
-            last_login: now.toISOString()
-          }).eq('telegram_id', user.id);
-
-          // ONLY show selector if region is truly missing
+          // ONLY show selector if region is truly missing in DB
           if (!data.region) {
             setShowRegionSelector(true);
           } else {
@@ -132,7 +131,7 @@ export default function Dashboard() {
     initUser();
   }, []);
 
-  // Live Ticker Logic
+  // Live Ticker Logic - Updates PENDING resources
   useEffect(() => {
     if (!userData || showRegionSelector) return;
 
@@ -140,8 +139,7 @@ export default function Dashboard() {
       const rates = getMiningRates(userData.region || '');
       const boost = 1 + referralCount * 0.05;
 
-      setResources(prev => ({
-        ...prev,
+      setPendingResources(prev => ({
         oil: prev.oil + (rates.oil * boost),
         gold: prev.gold + (rates.gold * boost),
         iron: prev.iron + (rates.iron * boost),
@@ -150,7 +148,40 @@ export default function Dashboard() {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [userData, showRegionSelector]);
+  }, [userData, showRegionSelector, referralCount]);
+
+  const handleClaim = async () => {
+    if (!userData || loading) return;
+    triggerHaptic();
+    setLoading(true);
+
+    const now = new Date();
+    const updatedResources = {
+      oil: (resources.oil || 0) + pendingResources.oil,
+      gold: (resources.gold || 0) + pendingResources.gold,
+      iron: (resources.iron || 0) + pendingResources.iron,
+      wheat: (resources.wheat || 0) + pendingResources.wheat,
+      ton: resources.ton
+    };
+
+    const { error } = await supabase
+      .from('users')
+      .update({
+        oil: updatedResources.oil,
+        gold: updatedResources.gold,
+        iron: updatedResources.iron,
+        wheat: updatedResources.wheat,
+        last_claim: now.toISOString()
+      })
+      .eq('telegram_id', userData.telegram_id);
+
+    if (!error) {
+      setResources(updatedResources);
+      setPendingResources({ oil: 0, gold: 0, iron: 0, wheat: 0 });
+      setLastClaimTime(now.toISOString());
+    }
+    setLoading(false);
+  };
 
   const triggerHaptic = () => {
     // @ts-ignore
@@ -233,9 +264,13 @@ export default function Dashboard() {
             <motion.div 
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="tech-card space-y-4"
+              className="tech-card space-y-4 relative overflow-hidden"
             >
-              <div className="flex justify-between items-end">
+              <div className="absolute top-0 right-0 p-4 opacity-10">
+                <MapIcon className="w-24 h-24" />
+              </div>
+
+              <div className="flex justify-between items-end relative z-10">
                 <div className="flex flex-col">
                   <span className="text-[10px] text-gray-500 uppercase tracking-widest font-mono mb-1">Vault Balance</span>
                   <span className="text-2xl font-black text-accent-orange tracking-tight">
@@ -245,7 +280,7 @@ export default function Dashboard() {
                 <div className="flex gap-2">
                   <button 
                     onClick={triggerHaptic}
-                    className="bg-accent-orange text-black text-[10px] font-bold px-3 py-2 rounded-lg hover:after:content-[''] hover:brightness-110 active:scale-90 transition-all shadow-[0_0_15px_rgba(255,145,0,0.3)]"
+                    className="bg-accent-orange text-black text-[10px] font-bold px-3 py-2 rounded-lg hover:brightness-110 active:scale-90 transition-all shadow-[0_0_15px_rgba(255,145,0,0.3)]"
                   >
                     DEPOSIT
                   </button>
@@ -258,24 +293,60 @@ export default function Dashboard() {
                 </div>
               </div>
               
-              {/* Resource Items */}
-              <div className="grid grid-cols-4 gap-2 pt-3 border-t border-border-main">
-                <button onClick={triggerHaptic} className="text-center group active:scale-95 transition-transform">
-                  <div className="text-[9px] text-gray-600 mb-1 group-hover:text-zinc-400 transition-colors">OIL</div>
-                  <div className="text-xs font-mono text-accent-cyan">{resources.oil.toFixed(1)}</div>
-                </button>
-                <button onClick={triggerHaptic} className="text-center group active:scale-95 transition-transform">
-                  <div className="text-[9px] text-gray-600 mb-1 group-hover:text-zinc-400 transition-colors">GLD</div>
-                  <div className="text-xs font-mono text-accent-cyan">{resources.gold.toFixed(1)}</div>
-                </button>
-                <button onClick={triggerHaptic} className="text-center group active:scale-95 transition-transform">
-                  <div className="text-[9px] text-gray-600 mb-1 group-hover:text-zinc-400 transition-colors">IRN</div>
-                  <div className="text-xs font-mono text-accent-cyan">{resources.iron.toFixed(1)}</div>
-                </button>
-                <button onClick={triggerHaptic} className="text-center group active:scale-95 transition-transform">
-                  <div className="text-[9px] text-gray-600 mb-1 group-hover:text-zinc-400 transition-colors">WHT</div>
-                  <div className="text-xs font-mono text-accent-cyan">{resources.wheat.toFixed(1)}</div>
-                </button>
+              {/* Mining Rewards Section */}
+              <div className="bg-black/30 rounded-xl p-3 border border-white/5 space-y-3">
+                <div className="flex justify-between items-center px-1">
+                  <div className="flex flex-col">
+                    <span className="text-[8px] font-mono text-zinc-500 uppercase tracking-widest">Pending Reserves</span>
+                    <div className="text-xs font-black text-white">{(Object.values(pendingResources).reduce((a, b) => a + b, 0)).toFixed(2)} Units</div>
+                  </div>
+                  <button 
+                    onClick={handleClaim}
+                    disabled={loading || (Object.values(pendingResources).reduce((a, b) => a + b, 0) < 0.1)}
+                    className="bg-accent-cyan text-black text-[10px] font-black px-4 py-1.5 rounded-lg active:scale-90 transition-all disabled:opacity-50 disabled:grayscale"
+                  >
+                    HARVEST
+                  </button>
+                </div>
+                
+                <div className="grid grid-cols-4 gap-2 pt-1 border-t border-white/5">
+                  <div className="text-center">
+                    <div className="text-[8px] text-gray-600 mb-0.5">OIL</div>
+                    <div className="text-[10px] font-mono text-accent-cyan">+{pendingResources.oil.toFixed(2)}</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-[8px] text-gray-600 mb-0.5">GLD</div>
+                    <div className="text-[10px] font-mono text-accent-cyan">+{pendingResources.gold.toFixed(2)}</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-[8px] text-gray-600 mb-0.5">IRN</div>
+                    <div className="text-[10px] font-mono text-accent-cyan">+{pendingResources.iron.toFixed(2)}</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-[8px] text-gray-600 mb-0.5">WHT</div>
+                    <div className="text-[10px] font-mono text-accent-cyan">+{pendingResources.wheat.toFixed(2)}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Resource Items (Stored) */}
+              <div className="grid grid-cols-4 gap-2 pt-1 border-t border-border-main">
+                <div className="text-center group">
+                  <div className="text-[9px] text-gray-600 mb-1">TOTAL OIL</div>
+                  <div className="text-xs font-mono text-zinc-300">{resources.oil.toFixed(0)}</div>
+                </div>
+                <div className="text-center group">
+                  <div className="text-[9px] text-gray-600 mb-1">TOTAL GLD</div>
+                  <div className="text-xs font-mono text-zinc-300">{resources.gold.toFixed(0)}</div>
+                </div>
+                <div className="text-center group">
+                  <div className="text-[9px] text-gray-600 mb-1">TOTAL IRN</div>
+                  <div className="text-xs font-mono text-zinc-300">{resources.iron.toFixed(0)}</div>
+                </div>
+                <div className="text-center group">
+                  <div className="text-[9px] text-gray-600 mb-1">TOTAL WHT</div>
+                  <div className="text-xs font-mono text-zinc-300">{resources.wheat.toFixed(0)}</div>
+                </div>
               </div>
             </motion.div>
 
