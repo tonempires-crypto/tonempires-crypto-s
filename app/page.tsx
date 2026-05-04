@@ -8,6 +8,9 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import RegionSelector from '@/components/dashboard/RegionSelector';
 import ReferralSection from '@/components/dashboard/ReferralSection';
+import MarketSection from '@/components/dashboard/MarketSection';
+import TradeSection from '@/components/dashboard/TradeSection';
+import TasksSection from '@/components/dashboard/TasksSection';
 
 export default function Dashboard() {
   const [userName, setUserName] = useState('jdoe_trading');
@@ -40,18 +43,39 @@ export default function Dashboard() {
         setCitizenId(user.id.toString().slice(-4));
         setFullUserId(user.id);
 
-        const { data, error } = await supabase
+        // 1. Fetch existing user
+        let { data, error } = await supabase
           .from('users')
-          .upsert({
-            telegram_id: user.id,
-            username: user.username || `User_${user.id}`,
-            last_login: new Date().toISOString(),
-          }, { 
-            onConflict: 'telegram_id',
-            ignoreDuplicates: false 
-          })
-          .select()
+          .select('*')
+          .eq('telegram_id', user.id)
           .single();
+
+        // 2. If user doesn't exist, create them
+        if (!data) {
+          const startParam = tg.initDataUnsafe?.start_param;
+          const referralInfo = startParam ? parseInt(startParam) : null;
+
+          const { data: newData, error: insertError } = await supabase
+            .from('users')
+            .insert({
+              telegram_id: user.id,
+              username: user.username || `User_${user.id}`,
+              ton_balance: 0,
+              referred_by: referralInfo,
+              last_login: new Date().toISOString(),
+            })
+            .select()
+            .single();
+          
+          data = newData;
+          if (insertError) console.error("Error creating user:", insertError);
+        } else {
+          // 3. Just update last login for existing user
+          await supabase
+            .from('users')
+            .update({ last_login: new Date().toISOString() })
+            .eq('telegram_id', user.id);
+        }
 
         if (data) {
           setUserData(data);
@@ -82,11 +106,13 @@ export default function Dashboard() {
             gold: updatedResources.gold,
             iron: updatedResources.iron,
             wheat: updatedResources.wheat,
-            last_login: now.toISOString()
           }).eq('telegram_id', user.id);
 
+          // ONLY show selector if region is truly missing
           if (!data.region) {
             setShowRegionSelector(true);
+          } else {
+            setShowRegionSelector(false);
           }
         }
       }
@@ -302,6 +328,12 @@ export default function Dashboard() {
               </div>
             </section>
           </>
+        ) : activeTab === 'market' ? (
+          <MarketSection />
+        ) : activeTab === 'trade' ? (
+          <TradeSection />
+        ) : activeTab === 'tasks' ? (
+          <TasksSection />
         ) : activeTab === 'invite' ? (
           <ReferralSection userId={fullUserId} />
         ) : (

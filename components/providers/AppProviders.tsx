@@ -20,19 +20,8 @@ export default function AppProviders({ children }: { children: React.ReactNode }
         const startParam = tg.initDataUnsafe?.start_param; // Captured from ?startapp=...
 
         if (user) {
-          // Zero-Click Registration / Auto-Save Logic using upsert
-          const referralInfo = startParam ? parseInt(startParam) : null;
-          
-          await supabase.from('users').upsert({
-            telegram_id: user.id,
-            username: user.username || `User_${user.id}`,
-            ton_balance: 0,
-            referred_by: referralInfo,
-            last_login: new Date().toISOString(),
-          }, { 
-            onConflict: 'telegram_id',
-            ignoreDuplicates: false 
-          });
+          // Telegram is ready, but we'll handle DB logic in the specific pages
+          // to avoid multiple conflicting upsert calls.
         }
       }
       setIsLoaded(true);
