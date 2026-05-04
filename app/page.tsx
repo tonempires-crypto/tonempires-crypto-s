@@ -127,23 +127,24 @@ export default function Dashboard() {
     const tg = window.Telegram?.WebApp;
     const user = tg?.initDataUnsafe?.user;
 
-    if (user) {
-      // Persist region selection
-      const { error } = await supabase
-        .from('users')
-        .update({ region: regionId })
-        .eq('telegram_id', user.id);
+    // Optimistically close and update UI for better feel
+    setShowRegionSelector(false);
+    setUserData((prev: any) => ({ ...prev, region: regionId }));
 
-      if (!error) {
-        setShowRegionSelector(false);
-        // Update local state to prevent re-triggering logic
-        setUserData((prev: any) => ({ ...prev, region: regionId }));
-      } else {
-        console.error("Error saving region:", error);
+    if (user) {
+      try {
+        const { error } = await supabase
+          .from('users')
+          .update({ region: regionId })
+          .eq('telegram_id', user.id);
+
+        if (error) {
+          console.error("Database error saving region:", error);
+          // If it failed, we might want to show it again, but for now we keep it closed to not annoy the user
+        }
+      } catch (err) {
+        console.error("Failed to persist region:", err);
       }
-    } else {
-      // Dev fallback
-      setShowRegionSelector(false);
     }
   };
 
