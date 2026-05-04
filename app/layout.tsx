@@ -33,10 +33,10 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${inter.variable} ${jetbrainsMono.variable} antialiased bg-industrial-bg text-[#E0E0E0] overflow-hidden flex items-center justify-center min-h-screen`}
+        className={`${inter.variable} ${jetbrainsMono.variable} antialiased bg-industrial-bg text-[#E0E0E0] h-screen overflow-hidden`}
       >
         <AppProviders>
-          <main className="min-h-screen w-full bg-industrial-bg relative flex flex-col overflow-hidden max-w-md mx-auto">
+          <main className="h-full w-full bg-industrial-bg relative flex flex-col max-w-md mx-auto overflow-y-auto">
             {children}
           </main>
         </AppProviders>

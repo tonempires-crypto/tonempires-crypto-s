@@ -5,17 +5,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 
 export default function AppProviders({ children }: { children: React.ReactNode }) {
-  const [manifestUrl, setManifestUrl] = useState('');
-
   useEffect(() => {
-    // Priority: 1. Environment Variable (Secret) 2. Dynamic Local Manifest
-    const envManifest = process.env.NEXT_PUBLIC_MANIFEST_URL;
-    if (envManifest) {
-      setManifestUrl(envManifest);
-    } else {
-      setManifestUrl(`${window.location.origin}/api/tonconnect/manifest`);
-    }
-    
     // Initializing Telegram WebApp
     const initTelegram = async () => {
       // @ts-ignore
@@ -39,7 +29,7 @@ export default function AppProviders({ children }: { children: React.ReactNode }
 
   return (
     <TonConnectUIProvider 
-      manifestUrl={manifestUrl || "/api/tonconnect/manifest"}
+      manifestUrl="https://tonempires-crypto-s.vercel.app/tonconnect-manifest.json"
       uiPreferences={{ theme: THEME.DARK }}
     >
       {children}
