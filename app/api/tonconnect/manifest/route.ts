@@ -6,7 +6,7 @@ export async function GET(request: Request) {
   const manifest = {
     url: origin,
     name: "TON Empires",
-    iconUrl: `${origin}/apple-touch-icon.png`, // Using a standard icon path or a placeholder correctly
+    iconUrl: "https://ton.org/static/ton_logo.svg",
     termsOfServiceUrl: `${origin}/terms`,
     privacyPolicyUrl: `${origin}/privacy`
   };

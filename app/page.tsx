@@ -1,9 +1,8 @@
 'use client';
 
-import { TonConnectButton } from '@tonconnect/ui-react';
-import { Wallet, Settings, TrendingUp, Map as MapIcon, ChevronRight, Zap, Loader2 } from 'lucide-react';
+import { TonConnectButton, useTonConnectUI } from '@tonconnect/ui-react';
+import { Wallet, Settings, TrendingUp, Map as MapIcon, ChevronRight, Zap, Loader2, CreditCard } from 'lucide-react';
 import { motion } from 'motion/react';
-import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import RegionSelector from '@/components/dashboard/RegionSelector';
@@ -24,6 +23,57 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('dash');
   const [resources, setResources] = useState({ oil: 0, gold: 0, iron: 0, wheat: 0, ton: 0 });
   const [referralCount, setReferralCount] = useState(0);
+  const [tonConnectUI] = useTonConnectUI();
+  
+  const ADMIN_WALLET = "UQCWOWCOQULzFdZttBaH3iUJyue51OEYvRhbCaitE4ktTxO4";
+
+  const handleDeposit = async () => {
+    triggerHaptic();
+    const amount = prompt("Enter amount of TON to deposit:");
+    if (!amount || isNaN(parseFloat(amount))) return;
+
+    const nanoAmount = (parseFloat(amount) * 1000000000).toString();
+
+    if (!tonConnectUI.connected) {
+      await tonConnectUI.connectWallet();
+      return;
+    }
+
+    try {
+      const transaction = {
+        validUntil: Math.floor(Date.now() / 1000) + 360,
+        messages: [
+          {
+            address: ADMIN_WALLET,
+            amount: nanoAmount,
+          }
+        ]
+      };
+
+      await tonConnectUI.sendTransaction(transaction);
+      
+      // OPTIMISTIC SYNC: Update balance in DB immediately after wallet confirmation
+      const newBalance = resources.ton + parseFloat(amount);
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ ton_balance: newBalance })
+        .eq('telegram_id', fullUserId);
+
+      if (!updateError) {
+        setResources(prev => ({ ...prev, ton: newBalance }));
+        alert(`SUCCESS: ${amount} TON credited to your Imperial Vault.`);
+      } else {
+        console.error("DB Sync Error:", updateError);
+        alert("Transaction confirmed on-chain, but registry sync failed. Please refresh.");
+      }
+    } catch (e) {
+      console.error("Deposit failed", e);
+      // Don't alert on user cancel, only on real errors
+      if (e instanceof Error && !e.message.includes('User rejected')) {
+        alert("Transfer Error: The Treasury could not process the request.");
+      }
+    }
+  };
   
   // Regional modifiers mapping
   const getMiningRates = (region: string) => {
@@ -223,9 +273,10 @@ export default function Dashboard() {
                 </div>
                 <div className="flex gap-2">
                   <button 
-                    onClick={triggerHaptic}
-                    className="bg-accent-orange text-black text-[10px] font-bold px-3 py-2 rounded-lg hover:brightness-110 active:scale-90 transition-all shadow-[0_0_15px_rgba(255,145,0,0.3)]"
+                    onClick={handleDeposit}
+                    className="bg-accent-orange text-black text-[10px] font-bold px-3 py-2 rounded-lg hover:brightness-110 active:scale-90 transition-all shadow-[0_0_15px_rgba(255,145,0,0.3)] flex items-center gap-1"
                   >
+                    <CreditCard className="w-3 h-3" />
                     DEPOSIT
                   </button>
                   <button 

@@ -13,6 +13,9 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
   const [timeLeft, setTimeLeft] = useState<number>(0);
 
   // Sync wallet address to DB
+  const [manualWallet, setManualWallet] = useState('');
+  const [showManual, setShowManual] = useState(false);
+
   useEffect(() => {
     const syncWallet = async () => {
       if (walletAddress && userData?.telegram_id) {
@@ -24,6 +27,26 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
     };
     syncWallet();
   }, [walletAddress, userData?.telegram_id]);
+
+  const saveManualWallet = async () => {
+    if (!manualWallet.startsWith('EQ') && !manualWallet.startsWith('UQ')) {
+      alert("Invalid TON address format. Should start with EQ or UQ.");
+      return;
+    }
+    setLoading(true);
+    const { error } = await supabase
+      .from('users')
+      .update({ wallet_address: manualWallet })
+      .eq('telegram_id', userData.telegram_id);
+    
+    if (!error) {
+      alert("Imperial Registry Updated: Wallet linked manually.");
+      setShowManual(false);
+    } else {
+      alert("Registry Sync Failed: " + error.message);
+    }
+    setLoading(false);
+  };
 
   useEffect(() => {
     const fetchReferrals = async () => {
@@ -144,9 +167,47 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
         </div>
         <div className="flex flex-col gap-3">
           <TonConnectButton className="w-full" />
-          {walletAddress && (
-            <div className="text-[10px] font-mono text-zinc-500 truncate bg-black/40 p-2 rounded-lg border border-white/5">
-              Connected: {walletAddress}
+          
+          <div className="h-px bg-white/5 my-1" />
+          
+          {showManual ? (
+            <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
+              <input 
+                type="text" 
+                placeholder="Paste TON Wallet Address (EQ...)"
+                value={manualWallet}
+                onChange={(e) => setManualWallet(e.target.value)}
+                className="w-full bg-black/60 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-mono text-white focus:border-blue-500 outline-none"
+              />
+              <div className="flex gap-2">
+                <button 
+                  onClick={saveManualWallet}
+                  disabled={loading}
+                  className="flex-1 bg-blue-600 text-white text-[10px] font-bold py-3 rounded-xl hover:bg-blue-500 transition-all uppercase tracking-widest"
+                >
+                  Confirm Link
+                </button>
+                <button 
+                  onClick={() => setShowManual(false)}
+                  className="px-4 bg-zinc-800 text-zinc-400 text-[10px] font-bold py-3 rounded-xl"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button 
+              onClick={() => setShowManual(true)}
+              className="w-full py-3 rounded-xl border border-white/10 text-[10px] font-mono text-zinc-500 uppercase tracking-widest hover:bg-white/5 transition-all"
+            >
+              Link Manually (Fallback)
+            </button>
+          )}
+
+          {(walletAddress || userData?.wallet_address) && (
+            <div className="text-[10px] font-mono text-cyan-400 truncate bg-cyan-500/5 p-3 rounded-xl border border-cyan-500/20 flex flex-col gap-1">
+              <span className="text-zinc-500 text-[8px] uppercase">Linked Telegram Wallet</span>
+              {walletAddress || userData?.wallet_address}
             </div>
           )}
         </div>
