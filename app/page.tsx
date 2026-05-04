@@ -143,7 +143,7 @@ export default function Dashboard() {
       setShowRegionSelector(false);
       
       // Double verify sync
-      const { data: verifiedUser, error: verifyError } = await supabase
+      const { data: verifiedUser } = await supabase
         .from('users')
         .select('*')
         .eq('telegram_id', fullUserId)
@@ -151,11 +151,11 @@ export default function Dashboard() {
         
       if (verifiedUser) {
         setUserData(verifiedUser);
-        console.log("User data refreshed after region select");
       }
     } else {
       console.error("CRITICAL: Failed to save region selection to Supabase", error);
-      alert(`ERROR SAVING REGION: ${error.message}. Please run the SQL command provided to disable RLS.`);
+      // More professional error message
+      alert("Imperial Registry Error: The database refused the update. Please ensure the 'users_region_check' constraint is removed in Supabase SQL Editor.");
     }
   };
 
