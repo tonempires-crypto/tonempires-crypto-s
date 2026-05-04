@@ -11,6 +11,8 @@ import ReferralSection from '@/components/dashboard/ReferralSection';
 import MarketSection from '@/components/dashboard/MarketSection';
 import TradeSection from '@/components/dashboard/TradeSection';
 import TasksSection from '@/components/dashboard/TasksSection';
+import ProfileSection from '@/components/dashboard/ProfileSection';
+import RegionEconomySection from '@/components/dashboard/RegionEconomySection';
 
 export default function Dashboard() {
   const [userName, setUserName] = useState('jdoe_trading');
@@ -21,15 +23,16 @@ export default function Dashboard() {
   const [userData, setUserData] = useState<any>(null);
   const [activeTab, setActiveTab] = useState('dash');
   const [resources, setResources] = useState({ oil: 0, gold: 0, iron: 0, wheat: 0, ton: 0 });
+  const [referralCount, setReferralCount] = useState(0);
   
   // Regional modifiers mapping
-  const getModifiers = (region: string) => {
-    const mods = { oil: 1, gold: 1, iron: 1, wheat: 1 };
-    if (region === 'middle_east') mods.oil = 2.5; // High oil yield
-    if (region === 'asia') mods.gold = 2.0;       // Industry hub
-    if (region === 'africa') mods.iron = 2.2;     // Resource rich
-    if (region === 'europe') mods.wheat = 2.1;    // Agricultural base
-    return mods;
+  const getMiningRates = (region: string) => {
+    const rates = { oil: 0.005, gold: 0.005, iron: 0.005, wheat: 0.005 };
+    if (region === 'middle_east') rates.oil = 0.025; 
+    if (region === 'asia') rates.gold = 0.020;       
+    if (region === 'africa') rates.iron = 0.022;     
+    if (region === 'europe') rates.wheat = 0.021;    
+    return rates;
   };
 
   useEffect(() => {
@@ -80,21 +83,27 @@ export default function Dashboard() {
         if (data) {
           setUserData(data);
           
+          // Fetch referral count for boost
+          const { count } = await supabase
+            .from('users')
+            .select('*', { count: 'exact', head: true })
+            .eq('referred_by', user.id);
+          const currentReferralCount = count || 0;
+          setReferralCount(currentReferralCount);
+
           // Calculate Passive Income since last login
           const now = new Date();
           const lastLogin = new Date(data.last_login || data.created_at || now);
           const diffSeconds = Math.max(0, (now.getTime() - lastLogin.getTime()) / 1000);
           
-          // Base rate: 0.01 units per second
-          const baseRate = 0.01;
-          const mods = getModifiers(data.region || '');
-          const gain = diffSeconds * baseRate;
-
+          const rates = getMiningRates(data.region || '');
+          const boost = 1 + (currentReferralCount * 0.05); // 5% boost per referral
+          
           const updatedResources = {
-            oil: (data.oil || 0) + (gain * mods.oil),
-            gold: (data.gold || 0) + (gain * mods.gold),
-            iron: (data.iron || 0) + (gain * mods.iron),
-            wheat: (data.wheat || 0) + (gain * mods.wheat),
+            oil: (data.oil || 0) + (diffSeconds * rates.oil * boost),
+            gold: (data.gold || 0) + (diffSeconds * rates.gold * boost),
+            iron: (data.iron || 0) + (diffSeconds * rates.iron * boost),
+            wheat: (data.wheat || 0) + (diffSeconds * rates.wheat * boost),
             ton: data.ton_balance || 0
           };
 
@@ -106,6 +115,7 @@ export default function Dashboard() {
             gold: updatedResources.gold,
             iron: updatedResources.iron,
             wheat: updatedResources.wheat,
+            last_login: now.toISOString()
           }).eq('telegram_id', user.id);
 
           // ONLY show selector if region is truly missing
@@ -127,15 +137,15 @@ export default function Dashboard() {
     if (!userData || showRegionSelector) return;
 
     const interval = setInterval(() => {
-      const mods = getModifiers(userData.region || '');
-      const rate = 0.01; // 0.01 units per second
+      const rates = getMiningRates(userData.region || '');
+      const boost = 1 + referralCount * 0.05;
 
       setResources(prev => ({
         ...prev,
-        oil: prev.oil + (rate * mods.oil),
-        gold: prev.gold + (rate * mods.gold),
-        iron: prev.iron + (rate * mods.iron),
-        wheat: prev.wheat + (rate * mods.wheat),
+        oil: prev.oil + (rates.oil * boost),
+        gold: prev.gold + (rates.gold * boost),
+        iron: prev.iron + (rates.iron * boost),
+        wheat: prev.wheat + (rates.wheat * boost),
       }));
     }, 1000);
 
@@ -201,7 +211,10 @@ export default function Dashboard() {
           <>
             {/* Header Profile */}
             <header className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
+              <button 
+                onClick={() => { setActiveTab('profile'); triggerHaptic(); }}
+                className="flex items-center gap-3 text-left hover:opacity-80 transition-opacity"
+              >
                 <div className="w-10 h-10 shrink-0 rounded-full bg-gradient-to-tr from-accent-cyan to-accent-blue border border-accent-cyan/30 flex items-center justify-center font-bold text-black uppercase">
                   {userName ? userName.slice(0, 2) : '??'}
                 </div>
@@ -209,7 +222,7 @@ export default function Dashboard() {
                   <span className="text-[10px] text-gray-500 font-mono uppercase tracking-widest leading-none mb-1">Citizen #{citizenId}</span>
                   <span className="text-sm font-semibold tracking-tight truncate">@{userName || 'Citizen'}</span>
                 </div>
-              </div>
+              </button>
               <div className="bg-[#151518] border border-border-main px-3 py-1.5 rounded-xl flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-accent-cyan animate-pulse"></div>
                 <span className="text-[10px] uppercase font-bold tracking-tighter">Live Network</span>
@@ -311,13 +324,24 @@ export default function Dashboard() {
 
             {/* Strategic Map View */}
             <section className="space-y-4 pb-8">
-              <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500">Strategic Map</h3>
-              <div className="grid grid-cols-5 gap-1.5 h-16">
+              <div className="flex justify-between items-center">
+                <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500">Strategic Map</h3>
+                <button 
+                  onClick={() => { setActiveTab('economy'); triggerHaptic(); }}
+                  className="text-[10px] text-accent-cyan font-mono uppercase tracking-widest hover:brightness-125 transition-all"
+                >
+                  Regional Intel
+                </button>
+              </div>
+              <button 
+                onClick={() => { setActiveTab('economy'); triggerHaptic(); }}
+                className="grid grid-cols-5 gap-1.5 h-16 w-full group active:scale-[0.98] transition-all"
+              >
                 {regions.map((region, i) => (
                   <div 
                     key={region.currency}
                     className={`rounded-lg border flex items-center justify-center text-[9px] font-bold transition-all
-                      ${region.name === 'MIDDLE EAST' 
+                      ${region.name === (userData?.region?.replace('_', ' ').toUpperCase()) || region.name === 'MIDDLE EAST' 
                         ? 'bg-accent-cyan/10 border-accent-cyan/40 text-accent-cyan shadow-[0_0_10px_rgba(0,255,209,0.2)]' 
                         : 'bg-[#151518] border-border-secondary text-gray-600'
                       }`}
@@ -325,7 +349,7 @@ export default function Dashboard() {
                     {region.currency}
                   </div>
                 ))}
-              </div>
+              </button>
             </section>
           </>
         ) : activeTab === 'market' ? (
@@ -336,6 +360,14 @@ export default function Dashboard() {
           <TasksSection />
         ) : activeTab === 'invite' ? (
           <ReferralSection userId={fullUserId} />
+        ) : activeTab === 'profile' ? (
+          <ProfileSection 
+            userData={userData} 
+            resources={resources} 
+            miningRates={getMiningRates(userData?.region || '')} 
+          />
+        ) : activeTab === 'economy' ? (
+          <RegionEconomySection regionId={userData?.region || 'middle_east'} />
         ) : (
           <div className="flex items-center justify-center h-full text-zinc-500 font-mono text-xs">MODULE UNDER CONSTRUCTION</div>
         )}
