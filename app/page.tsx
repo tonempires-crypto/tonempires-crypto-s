@@ -39,21 +39,30 @@ export default function Dashboard() {
     const initUser = async () => {
       // @ts-ignore
       const tg = window.Telegram?.WebApp;
-      const user = tg?.initDataUnsafe?.user;
+      let user = tg?.initDataUnsafe?.user;
+
+      // DEV MOCK: If no telegram user, use a fixed one for testing in browser
+      if (!user && process.env.NODE_ENV === 'development') {
+        user = { id: 1492586846, username: 'dev_user', first_name: 'Dev' };
+      }
 
       if (user) {
-        tg.ready();
+        tg?.ready();
         setUserName(user.username || user.first_name || 'Citizen');
         setCitizenId(user.id.toString().slice(-4));
         setFullUserId(user.id);
 
-        // 1. UPSCALE: Check if user exists or create them with a clean record
-        // We use maybeSingle to avoid errors if multiple rows exist (though SQL constraint should fix that)
-        const { data, error } = await supabase
+        // 1. UPSCALE: Check if user exists.
+        const { data: users, error: fetchError } = await supabase
           .from('users')
           .select('*')
           .eq('telegram_id', user.id)
-          .maybeSingle();
+          .order('region', { ascending: false }) 
+          .limit(1);
+
+        if (fetchError) console.error("Error fetching user:", fetchError);
+
+        const data = users?.[0];
 
         if (data) {
           setUserData(data);
@@ -65,15 +74,14 @@ export default function Dashboard() {
             ton: data.ton_balance || 0
           });
           
-          // Persistence fix: If region is already in DB, hide selector FOREVER
-          if (data.region) {
+          if (data.region && data.region !== '') {
             setShowRegionSelector(false);
           } else {
             setShowRegionSelector(true);
           }
         } else {
-          // Create user if literally not found
-          const startParam = tg.initDataUnsafe?.start_param;
+          // Create user if not found
+          const startParam = tg?.initDataUnsafe?.start_param;
           const referralInfo = startParam ? parseInt(startParam) : null;
 
           const { data: newUser, error: insertError } = await supabase
@@ -92,8 +100,12 @@ export default function Dashboard() {
           if (newUser) {
             setUserData(newUser);
             setShowRegionSelector(true);
+          } else if (insertError) {
+            console.error("Critical: Initial user upsert failed", insertError);
           }
         }
+      } else {
+        console.warn("No Telegram user and not in dev mode. App will be limited.");
       }
       setLoading(false);
     };
@@ -109,23 +121,41 @@ export default function Dashboard() {
   };
 
   const handleRegionSelect = async (regionId: string) => {
-    if (!userData || !fullUserId) return;
+    if (!userData || !fullUserId) {
+      console.error("Missing userData or fullUserId during region selection", { userData, fullUserId });
+      return;
+    }
     triggerHaptic();
     
-        // Hard Lock: Save to DB then update state
-        const { error } = await supabase
-          .from('users')
-          .update({ region: regionId })
-          .eq('telegram_id', fullUserId);
+    // Hard Lock: Force update record
+    console.log(`Attempting to set region ${regionId} for user ${fullUserId}`);
+    const { error } = await supabase
+      .from('users')
+      .update({ 
+        region: regionId,
+        last_login: new Date().toISOString() 
+      })
+      .eq('telegram_id', fullUserId);
 
-        if (!error) {
-          setUserData((prev: any) => ({ ...prev, region: regionId }));
-          setShowRegionSelector(false);
-          // Refresh user data to be safe
-          const { data } = await supabase.from('users').select('*').eq('telegram_id', fullUserId).single();
-          if (data) setUserData(data);
-        } else {
-      console.error("Critical: Failed to save region selection", error);
+    if (!error) {
+      console.log(`Region confirmed in DB: ${regionId}`);
+      setUserData((prev: any) => ({ ...prev, region: regionId }));
+      setShowRegionSelector(false);
+      
+      // Double verify sync
+      const { data: verifiedUser, error: verifyError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('telegram_id', fullUserId)
+        .maybeSingle();
+        
+      if (verifiedUser) {
+        setUserData(verifiedUser);
+        console.log("User data refreshed after region select");
+      }
+    } else {
+      console.error("CRITICAL: Failed to save region selection to Supabase", error);
+      alert(`ERROR SAVING REGION: ${error.message}. Please run the SQL command provided to disable RLS.`);
     }
   };
 
