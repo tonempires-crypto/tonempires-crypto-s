@@ -5,9 +5,12 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 
 export default function AppProviders({ children }: { children: React.ReactNode }) {
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [manifestUrl, setManifestUrl] = useState('');
 
   useEffect(() => {
+    // Set absolute manifest URL on client side
+    setManifestUrl(`${window.location.origin}/api/tonconnect/manifest`);
+    
     // Initializing Telegram WebApp
     const initTelegram = async () => {
       // @ts-ignore
@@ -24,7 +27,6 @@ export default function AppProviders({ children }: { children: React.ReactNode }
           // to avoid multiple conflicting upsert calls.
         }
       }
-      setIsLoaded(true);
     };
 
     initTelegram();
@@ -32,7 +34,7 @@ export default function AppProviders({ children }: { children: React.ReactNode }
 
   return (
     <TonConnectUIProvider 
-      manifestUrl="/tonconnect-manifest.json"
+      manifestUrl={manifestUrl || "/api/tonconnect/manifest"}
       uiPreferences={{ theme: THEME.DARK }}
     >
       {children}

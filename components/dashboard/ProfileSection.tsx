@@ -12,6 +12,19 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
   const [loading, setLoading] = useState(false);
   const [timeLeft, setTimeLeft] = useState<number>(0);
 
+  // Sync wallet address to DB
+  useEffect(() => {
+    const syncWallet = async () => {
+      if (walletAddress && userData?.telegram_id) {
+        await supabase
+          .from('users')
+          .update({ wallet_address: walletAddress })
+          .eq('telegram_id', userData.telegram_id);
+      }
+    };
+    syncWallet();
+  }, [walletAddress, userData?.telegram_id]);
+
   useEffect(() => {
     const fetchReferrals = async () => {
       if (!userData?.telegram_id) return;
