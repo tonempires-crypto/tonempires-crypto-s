@@ -23,8 +23,6 @@ export default function Dashboard() {
   const [userData, setUserData] = useState<any>(null);
   const [activeTab, setActiveTab] = useState('dash');
   const [resources, setResources] = useState({ oil: 0, gold: 0, iron: 0, wheat: 0, ton: 0 });
-  const [pendingResources, setPendingResources] = useState({ oil: 0, gold: 0, iron: 0, wheat: 0 });
-  const [lastClaimTime, setLastClaimTime] = useState<string>('');
   const [referralCount, setReferralCount] = useState(0);
   
   // Regional modifiers mapping
@@ -42,73 +40,23 @@ export default function Dashboard() {
       // @ts-ignore
       const tg = window.Telegram?.WebApp;
       const user = tg?.initDataUnsafe?.user;
-      
+
       if (user) {
-        setUserName(user.username || user.first_name);
+        tg.ready();
+        setUserName(user.username || user.first_name || 'Citizen');
         setCitizenId(user.id.toString().slice(-4));
         setFullUserId(user.id);
 
-        // 1. Fetch existing user
-        let { data, error } = await supabase
+        // 1. UPSCALE: Check if user exists or create them with a clean record
+        // We use maybeSingle to avoid errors if multiple rows exist (though SQL constraint should fix that)
+        const { data, error } = await supabase
           .from('users')
           .select('*')
           .eq('telegram_id', user.id)
-          .single();
-
-        // 2. If user doesn't exist, create them
-        if (!data) {
-          const startParam = tg.initDataUnsafe?.start_param;
-          const referralInfo = startParam ? parseInt(startParam) : null;
-
-          const { data: newData, error: insertError } = await supabase
-            .from('users')
-            .insert({
-              telegram_id: user.id,
-              username: user.username || `User_${user.id}`,
-              ton_balance: 0,
-              referred_by: referralInfo,
-              last_login: new Date().toISOString(),
-            })
-            .select()
-            .single();
-          
-          data = newData;
-          if (insertError) console.error("Error creating user:", insertError);
-        } else {
-          // 3. Just update last login for existing user
-          await supabase
-            .from('users')
-            .update({ last_login: new Date().toISOString() })
-            .eq('telegram_id', user.id);
-        }
+          .maybeSingle();
 
         if (data) {
           setUserData(data);
-          setLastClaimTime(data.last_claim || data.created_at);
-          
-          // Fetch referral count for boost
-          const { count } = await supabase
-            .from('users')
-            .select('*', { count: 'exact', head: true })
-            .eq('referred_by', user.id);
-          const currentReferralCount = count || 0;
-          setReferralCount(currentReferralCount);
-
-          // Calculate Pending Resources since last claim
-          const now = new Date();
-          const lastClaim = new Date(data.last_claim || data.created_at || now);
-          const diffSeconds = Math.max(0, (now.getTime() - lastClaim.getTime()) / 1000);
-          
-          const rates = getMiningRates(data.region || '');
-          const boost = 1 + (currentReferralCount * 0.05); // 5% boost per referral
-          
-          setPendingResources({
-            oil: diffSeconds * rates.oil * boost,
-            gold: diffSeconds * rates.gold * boost,
-            iron: diffSeconds * rates.iron * boost,
-            wheat: diffSeconds * rates.wheat * boost,
-          });
-
           setResources({
             oil: data.oil || 0,
             gold: data.gold || 0,
@@ -116,12 +64,34 @@ export default function Dashboard() {
             wheat: data.wheat || 0,
             ton: data.ton_balance || 0
           });
-
-          // ONLY show selector if region is truly missing in DB
-          if (!data.region) {
-            setShowRegionSelector(true);
-          } else {
+          
+          // Persistence fix: If region is already in DB, hide selector FOREVER
+          if (data.region) {
             setShowRegionSelector(false);
+          } else {
+            setShowRegionSelector(true);
+          }
+        } else {
+          // Create user if literally not found
+          const startParam = tg.initDataUnsafe?.start_param;
+          const referralInfo = startParam ? parseInt(startParam) : null;
+
+          const { data: newUser, error: insertError } = await supabase
+            .from('users')
+            .upsert({
+              telegram_id: user.id,
+              username: user.username || `User_${user.id}`,
+              ton_balance: 0,
+              referred_by: referralInfo,
+              last_login: new Date().toISOString(),
+              created_at: new Date().toISOString(),
+            }, { onConflict: 'telegram_id' })
+            .select()
+            .maybeSingle();
+          
+          if (newUser) {
+            setUserData(newUser);
+            setShowRegionSelector(true);
           }
         }
       }
@@ -131,57 +101,7 @@ export default function Dashboard() {
     initUser();
   }, []);
 
-  // Live Ticker Logic - Updates PENDING resources
-  useEffect(() => {
-    if (!userData || showRegionSelector) return;
-
-    const interval = setInterval(() => {
-      const rates = getMiningRates(userData.region || '');
-      const boost = 1 + referralCount * 0.05;
-
-      setPendingResources(prev => ({
-        oil: prev.oil + (rates.oil * boost),
-        gold: prev.gold + (rates.gold * boost),
-        iron: prev.iron + (rates.iron * boost),
-        wheat: prev.wheat + (rates.wheat * boost),
-      }));
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [userData, showRegionSelector, referralCount]);
-
-  const handleClaim = async () => {
-    if (!userData || loading) return;
-    triggerHaptic();
-    setLoading(true);
-
-    const now = new Date();
-    const updatedResources = {
-      oil: (resources.oil || 0) + pendingResources.oil,
-      gold: (resources.gold || 0) + pendingResources.gold,
-      iron: (resources.iron || 0) + pendingResources.iron,
-      wheat: (resources.wheat || 0) + pendingResources.wheat,
-      ton: resources.ton
-    };
-
-    const { error } = await supabase
-      .from('users')
-      .update({
-        oil: updatedResources.oil,
-        gold: updatedResources.gold,
-        iron: updatedResources.iron,
-        wheat: updatedResources.wheat,
-        last_claim: now.toISOString()
-      })
-      .eq('telegram_id', userData.telegram_id);
-
-    if (!error) {
-      setResources(updatedResources);
-      setPendingResources({ oil: 0, gold: 0, iron: 0, wheat: 0 });
-      setLastClaimTime(now.toISOString());
-    }
-    setLoading(false);
-  };
+  // Removed Live Ticker Logic - Mining is now a button in ProfileSection
 
   const triggerHaptic = () => {
     // @ts-ignore
@@ -189,29 +109,23 @@ export default function Dashboard() {
   };
 
   const handleRegionSelect = async (regionId: string) => {
+    if (!userData || !fullUserId) return;
     triggerHaptic();
-    // @ts-ignore
-    const tg = window.Telegram?.WebApp;
-    const user = tg?.initDataUnsafe?.user;
-
-    // Optimistically close and update UI for better feel
-    setShowRegionSelector(false);
-    setUserData((prev: any) => ({ ...prev, region: regionId }));
-
-    if (user) {
-      try {
+    
+        // Hard Lock: Save to DB then update state
         const { error } = await supabase
           .from('users')
           .update({ region: regionId })
-          .eq('telegram_id', user.id);
+          .eq('telegram_id', fullUserId);
 
-        if (error) {
-          console.error("Database error saving region:", error);
-          // If it failed, we might want to show it again, but for now we keep it closed to not annoy the user
-        }
-      } catch (err) {
-        console.error("Failed to persist region:", err);
-      }
+        if (!error) {
+          setUserData((prev: any) => ({ ...prev, region: regionId }));
+          setShowRegionSelector(false);
+          // Refresh user data to be safe
+          const { data } = await supabase.from('users').select('*').eq('telegram_id', fullUserId).single();
+          if (data) setUserData(data);
+        } else {
+      console.error("Critical: Failed to save region selection", error);
     }
   };
 
@@ -271,8 +185,8 @@ export default function Dashboard() {
               </div>
 
               <div className="flex justify-between items-end relative z-10">
-                <div className="flex flex-col">
-                  <span className="text-[10px] text-gray-500 uppercase tracking-widest font-mono mb-1">Vault Balance</span>
+                <div className="flex flex-col text-left">
+                  <span className="text-[10px] text-gray-500 uppercase tracking-widest font-mono mb-1">Treasury Balance</span>
                   <span className="text-2xl font-black text-accent-orange tracking-tight">
                     {resources.ton.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TON
                   </span>
@@ -292,45 +206,9 @@ export default function Dashboard() {
                   </button>
                 </div>
               </div>
-              
-              {/* Mining Rewards Section */}
-              <div className="bg-black/30 rounded-xl p-3 border border-white/5 space-y-3">
-                <div className="flex justify-between items-center px-1">
-                  <div className="flex flex-col">
-                    <span className="text-[8px] font-mono text-zinc-500 uppercase tracking-widest">Pending Reserves</span>
-                    <div className="text-xs font-black text-white">{(Object.values(pendingResources).reduce((a, b) => a + b, 0)).toFixed(2)} Units</div>
-                  </div>
-                  <button 
-                    onClick={handleClaim}
-                    disabled={loading || (Object.values(pendingResources).reduce((a, b) => a + b, 0) < 0.1)}
-                    className="bg-accent-cyan text-black text-[10px] font-black px-4 py-1.5 rounded-lg active:scale-90 transition-all disabled:opacity-50 disabled:grayscale"
-                  >
-                    HARVEST
-                  </button>
-                </div>
-                
-                <div className="grid grid-cols-4 gap-2 pt-1 border-t border-white/5">
-                  <div className="text-center">
-                    <div className="text-[8px] text-gray-600 mb-0.5">OIL</div>
-                    <div className="text-[10px] font-mono text-accent-cyan">+{pendingResources.oil.toFixed(2)}</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-[8px] text-gray-600 mb-0.5">GLD</div>
-                    <div className="text-[10px] font-mono text-accent-cyan">+{pendingResources.gold.toFixed(2)}</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-[8px] text-gray-600 mb-0.5">IRN</div>
-                    <div className="text-[10px] font-mono text-accent-cyan">+{pendingResources.iron.toFixed(2)}</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-[8px] text-gray-600 mb-0.5">WHT</div>
-                    <div className="text-[10px] font-mono text-accent-cyan">+{pendingResources.wheat.toFixed(2)}</div>
-                  </div>
-                </div>
-              </div>
 
               {/* Resource Items (Stored) */}
-              <div className="grid grid-cols-4 gap-2 pt-1 border-t border-border-main">
+              <div className="grid grid-cols-4 gap-2 pt-4 border-t border-border-main">
                 <div className="text-center group">
                   <div className="text-[9px] text-gray-600 mb-1">TOTAL OIL</div>
                   <div className="text-xs font-mono text-zinc-300">{resources.oil.toFixed(0)}</div>
@@ -349,6 +227,14 @@ export default function Dashboard() {
                 </div>
               </div>
             </motion.div>
+
+            {/* Hint Notice */}
+            <div className="p-3 bg-accent-cyan/5 border border-accent-cyan/20 rounded-xl">
+              <p className="text-[10px] text-accent-cyan italic text-center">
+                Visit your Profile to mine your hourly regional resources.
+              </p>
+            </div>
+
 
             {/* Market Quotations */}
             <section className="space-y-4">
@@ -436,6 +322,10 @@ export default function Dashboard() {
             userData={userData} 
             resources={resources} 
             miningRates={getMiningRates(userData?.region || '')} 
+            onClaimSuccess={(newRes) => {
+              setResources(newRes);
+              setUserData((prev: any) => ({ ...prev, last_claim: new Date().toISOString() }));
+            }}
           />
         ) : activeTab === 'economy' ? (
           <RegionEconomySection regionId={userData?.region || 'middle_east'} />
