@@ -8,8 +8,13 @@ export default function AppProviders({ children }: { children: React.ReactNode }
   const [manifestUrl, setManifestUrl] = useState('');
 
   useEffect(() => {
-    // Set absolute manifest URL on client side
-    setManifestUrl(`${window.location.origin}/api/tonconnect/manifest`);
+    // Priority: 1. Environment Variable (Secret) 2. Dynamic Local Manifest
+    const envManifest = process.env.NEXT_PUBLIC_MANIFEST_URL;
+    if (envManifest) {
+      setManifestUrl(envManifest);
+    } else {
+      setManifestUrl(`${window.location.origin}/api/tonconnect/manifest`);
+    }
     
     // Initializing Telegram WebApp
     const initTelegram = async () => {
