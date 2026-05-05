@@ -19,7 +19,7 @@ export default function CompaniesSection({ userData, resources }: CompaniesSecti
   const regionId = userData?.region || 'middle_east';
 
   useEffect(() => {
-    fetchCompanies();
+    if (regionId) fetchCompanies();
   }, [regionId]);
 
   const fetchCompanies = async () => {
@@ -28,13 +28,44 @@ export default function CompaniesSection({ userData, resources }: CompaniesSecti
       const { data, error } = await supabase
         .from('companies')
         .select('*')
-        .eq('region', regionId)
-        .order('is_government', { ascending: false });
+        .eq('region', regionId);
 
-      if (data) {
-        setGovCompanies(data.filter(c => c.is_government));
-        setPrivateCompanies(data.filter(c => !c.is_government));
+      if (error) throw error;
+
+      const gov = data?.filter(c => c.is_government) || [];
+      const priv = data?.filter(c => !c.is_government) || [];
+
+      // Auto-Seed Check: Each empire must have 4 core companies
+      const resourceTypes = ['oil', 'gold', 'iron', 'wheat'];
+      const missingTypes = resourceTypes.filter(type => !gov.find(c => c.resource_type === type));
+
+      if (missingTypes.length > 0) {
+        console.log("INITIALIZING STATE INFRASTRUCTURE FOR REGION:", regionId);
+        const newGovs = missingTypes.map(type => ({
+          name: `Imperial ${type.charAt(0).toUpperCase() + type.slice(1)} Extraction`,
+          is_government: true,
+          resource_type: type,
+          region: regionId,
+          level: 1,
+          employees_count: 0
+        }));
+
+        const { data: inserted, error: insertError } = await supabase
+          .from('companies')
+          .insert(newGovs)
+          .select();
+
+        if (!insertError && inserted) {
+          setGovCompanies([...gov, ...inserted]);
+        } else {
+          console.error("Infrastructure Initialization Error:", insertError);
+          setGovCompanies(gov);
+        }
+      } else {
+        setGovCompanies(gov);
       }
+      
+      setPrivateCompanies(priv);
     } catch (e) {
       console.error(e);
     } finally {
