@@ -21,7 +21,7 @@ export default function Dashboard() {
   const [showRegionSelector, setShowRegionSelector] = useState(false);
   const [userData, setUserData] = useState<any>(null);
   const [activeTab, setActiveTab] = useState('dash');
-  const [resources, setResources] = useState({ oil: 0, gold: 0, iron: 0, wheat: 0, ton: 0 });
+  const [resources, setResources] = useState({ oil: 0, gold: 0, iron: 0, wheat: 0, ton: 0, localCurrency: 0 });
   const [referralCount, setReferralCount] = useState(0);
   const [tonConnectUI] = useTonConnectUI();
   
@@ -121,7 +121,8 @@ export default function Dashboard() {
             gold: data.gold || 0,
             iron: data.iron || 0,
             wheat: data.wheat || 0,
-            ton: data.ton_balance || 0
+            ton: data.ton_balance || 0,
+            localCurrency: data.local_currency_balance || 0
           });
           
           if (data.region && data.region !== '') {

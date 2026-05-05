@@ -78,13 +78,15 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
 
     const boost = 1 + (referralCount * 0.05);
     const gain = 3600 * boost; // 1 hour worth of mining in one go
+    const currencyGain = 10 * boost; // Standard regional currency yield per hour
 
     const newResources = {
       oil: (resources.oil || 0) + (miningRates.oil * gain),
       gold: (resources.gold || 0) + (miningRates.gold * gain),
       iron: (resources.iron || 0) + (miningRates.iron * gain),
       wheat: (resources.wheat || 0) + (miningRates.wheat * gain),
-      ton: resources.ton
+      ton: resources.ton,
+      localCurrency: (resources.localCurrency || 0) + currencyGain
     };
 
     const { error } = await supabase
@@ -94,6 +96,7 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
         gold: newResources.gold,
         iron: newResources.iron,
         wheat: newResources.wheat,
+        local_currency_balance: newResources.localCurrency,
         last_claim: new Date().toISOString()
       })
       .eq('telegram_id', userData.telegram_id);
@@ -114,6 +117,19 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
   const totalMining = Object.values(miningRates).reduce((a: any, b: any) => a + b, 0) as number;
   const boostedMining = totalMining * (1 + boost);
 
+  const getRegionalCurrency = (region: string) => {
+    switch (region) {
+      case 'middle_east': return { name: 'Middle East Dinar', code: 'BTM', color: 'text-accent-cyan' };
+      case 'africa': return { name: 'African Credits', code: 'BTF', color: 'text-amber-500' };
+      case 'europe': return { name: 'Euro-Sovereign', code: 'BTE', color: 'text-blue-500' };
+      case 'asia': return { name: 'Asian Yuan-B', code: 'BTA', codeColor: 'text-red-500' };
+      case 'east_asia': return { name: 'East Asian Yen', code: 'BTR', color: 'text-purple-500' };
+      default: return { name: 'Imperial Credits', code: 'BTX', color: 'text-zinc-500' };
+    }
+  };
+
+  const regionalCurrency = getRegionalCurrency(userData?.region || '');
+
   return (
     <div className="space-y-6 pb-24">
       {/* Profile Header */}
@@ -126,6 +142,23 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
           <div className="flex items-center justify-center gap-2 mt-1">
             <span className="px-2 py-0.5 rounded bg-accent-cyan/10 border border-accent-cyan/20 text-[10px] font-mono text-accent-cyan uppercase tracking-widest">Citizen Rank: Alpha</span>
           </div>
+        </div>
+      </div>
+
+      {/* Sovereign Wealth Section */}
+      <div className="tech-card border-accent-orange/40 bg-accent-orange/5 p-5">
+        <div className="flex justify-between items-start mb-4">
+          <div className="flex flex-col">
+            <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest">Sovereign Wealth</span>
+            <span className={`text-2xl font-black ${regionalCurrency.color || 'text-white'}`}>{resources.localCurrency?.toLocaleString() || '0.00'} {regionalCurrency.code}</span>
+          </div>
+          <div className="bg-black/40 px-3 py-1 rounded-lg border border-white/5 text-[9px] font-mono text-zinc-400">
+            {regionalCurrency.name}
+          </div>
+        </div>
+        <div className="flex items-center gap-2 text-[10px] text-zinc-500 italic">
+          <Zap className="w-3 h-3 text-accent-orange" />
+          Actively mining {regionalCurrency.code} for the {userData?.region?.replace('_', ' ').toUpperCase()} Empire
         </div>
       </div>
 
