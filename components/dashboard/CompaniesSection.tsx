@@ -336,10 +336,25 @@ export default function CompaniesSection({ userData, resources }: CompaniesSecti
         )}
       </div>
 
-      <div className="tech-card p-4 border-dashed border-accent-cyan/10 bg-accent-cyan/5">
-        <p className="text-[9px] text-zinc-400 font-mono leading-relaxed uppercase">
-          <span className="text-accent-cyan font-bold">Industrial Guidelines:</span> Citizens contribute neural cycles to regional companies to scale empire reserves. Private enterprise yields are taxed 20% to the Sovereign Treasury. All level upgrades are irreversible and scale quadratically based on current efficiency.
-        </p>
+      <div className="tech-card p-6 border-white/5 bg-zinc-900/40">
+        <h3 className="text-xs font-black uppercase tracking-[0.2em] text-accent-cyan mb-4 flex items-center gap-2">
+          <Shield className="w-3 h-3" />
+          Empire Sector Protocol
+        </h3>
+        <div className="space-y-4 text-[10px] font-mono text-zinc-400 uppercase leading-relaxed">
+          <p>
+            <span className="text-white font-bold">1. Universal Employment:</span> Every citizen MUST be stationed in exactly ONE industrial sector. Once signed, contracts are binding to prevent neural espionage.
+          </p>
+          <p>
+            <span className="text-white font-bold">2. Sovereign Yield:</span> Production from <span className="text-accent-cyan">Imperial Infrastructure</span> is transmitted directly to the National Treasury. Individual workers receive zero direct yield but contribute to the logic of the Hegemony.
+          </p>
+          <p>
+            <span className="text-white font-bold">3. Private Conglomerates:</span> Established for 5 TON. Owners receive all yields after a <span className="text-accent-orange">20% Sovereign Tax</span> is automatically deducted for the Empire.
+          </p>
+          <p>
+            <span className="text-white font-bold">4. Industrial Scaling:</span> Sectors have 100 efficiency levels. Upgrades require massive resource injections and Imperial Credits. Higher levels provide exponential production boosts.
+          </p>
+        </div>
       </div>
     </div>
   );

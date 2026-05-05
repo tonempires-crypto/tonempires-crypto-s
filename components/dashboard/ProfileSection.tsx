@@ -137,7 +137,29 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
     };
 
     try {
-      // 1. Update User Resources
+      const targetRegion = userData.region || 'middle_east';
+
+      // 1. Attempt Atomic RPC Claim (Recommended)
+      const { error: rpcError } = await supabase.rpc('claim_mining_with_tax', {
+        p_telegram_id: userData.telegram_id,
+        p_oil: newResources.oil,
+        p_gold: newResources.gold,
+        p_iron: newResources.iron,
+        p_wheat: newResources.wheat,
+        p_net_currency: newResources.localCurrency,
+        p_tax_amount: taxDeduction,
+        p_region_id: targetRegion
+      });
+
+      if (!rpcError) {
+        onClaimSuccess(newResources);
+        setLoading(false);
+        return;
+      }
+
+      console.warn("RPC Claim failed, falling back to sequential update:", rpcError);
+
+      // 2. FALLBACK: Sequential Update (If RPC not yet created in Supabase)
       const { error: userError } = await supabase
         .from('users')
         .update({
@@ -152,16 +174,14 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
 
       if (userError) throw userError;
 
-      // 2. Transmit Tax to Regional Treasury
-      // We increment the tax_treasury column for the user's region
-      const targetRegion = userData.region || 'middle_east';
+      // Update Regional Treasury
       const { data: regionData } = await supabase
         .from('regions')
         .select('tax_treasury')
         .eq('id', targetRegion)
         .single();
       
-      const currentTax = regionData?.tax_treasury || 0;
+      const currentTax = Number(regionData?.tax_treasury || 0);
       
       const { error: treasuryError } = await supabase
         .from('regions')
@@ -175,7 +195,7 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
       onClaimSuccess(newResources);
     } catch (err) {
       console.error("Mining Sync Failure:", err);
-      alert("Mining Interrupted: Neural link unstable.");
+      alert("Mining Interrupted: Registry sync refused. Please ensure the 'claim_mining_with_tax' function is installed in Supabase.");
     }
     setLoading(false);
   };
