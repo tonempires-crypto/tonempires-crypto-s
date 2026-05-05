@@ -176,7 +176,23 @@ export default function CompaniesSection({ userData, resources }: CompaniesSecti
     const base = 50; 
     const employeeMultiplier = 1 + (company.employees_count * 0.1);
     const levelMultiplier = 1 + (company.level * 0.2);
-    return Math.floor(base * employeeMultiplier * levelMultiplier);
+    
+    // Regional Synergy Bonuses
+    let regionalBonus = 1;
+    if (company.region === 'middle_east' && company.resource_type === 'oil') regionalBonus = 1.5;
+    if (company.region === 'africa' && company.resource_type === 'gold') regionalBonus = 1.6;
+    if (company.region === 'europe' && company.resource_type === 'iron') regionalBonus = 1.3;
+    if (company.region === 'asia' && company.resource_type === 'wheat') regionalBonus = 1.5;
+    if (company.region === 'east_asia') regionalBonus = 1.15; // Tech bonus applied to all
+
+    return Math.floor(base * employeeMultiplier * levelMultiplier * regionalBonus);
+  };
+
+  const getUpgradeCost = (level: number) => {
+    return {
+      resources: Math.floor(2000 * Math.pow(1.3, level)),
+      credits: Math.floor(5000 * Math.pow(1.25, level))
+    };
   };
 
   return (
@@ -186,57 +202,78 @@ export default function CompaniesSection({ userData, resources }: CompaniesSecti
           <h2 className="text-xl font-black uppercase tracking-tight">Industrial Registry</h2>
           <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest leading-none">Global Production Chains</p>
         </div>
-        <div className="bg-accent-cyan/10 px-2 py-1 rounded border border-accent-cyan/20">
+        <div className="bg-accent-cyan/10 px-2 py-1 rounded border border-accent-cyan/20 flex items-center gap-2">
+          <div className="w-1.5 h-1.5 rounded-full bg-accent-cyan animate-pulse"></div>
           <span className="text-[10px] font-mono text-accent-cyan uppercase">{regionId.replace('_', ' ')} SECTOR</span>
         </div>
       </div>
 
       {/* State Owned Sector */}
       <div className="space-y-4">
-        <div className="flex items-center gap-2 px-1">
-          <Shield className="w-4 h-4 text-accent-cyan" />
-          <h3 className="text-xs font-black uppercase tracking-widest text-white/70">Imperial Infrastructure</h3>
+        <div className="flex items-center justify-between px-1">
+          <div className="flex items-center gap-2">
+            <Shield className="w-4 h-4 text-accent-cyan" />
+            <h3 className="text-xs font-black uppercase tracking-widest text-white/70">Imperial Infrastructure</h3>
+          </div>
+          <span className="text-[9px] font-mono text-zinc-600 uppercase">State Property</span>
         </div>
 
         <div className="grid grid-cols-1 gap-3">
-          {govCompanies.map(company => (
-            <div key={company.id} className="tech-card p-5 border-white/5 bg-zinc-900/40 relative overflow-hidden group">
-              <div className="flex justify-between items-start relative z-10">
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-2">
-                    <Factory className="w-4 h-4 text-accent-cyan" />
-                    <span className="text-sm font-bold text-white uppercase">{company.name}</span>
+          {govCompanies.map(company => {
+            const upCost = getUpgradeCost(company.level);
+            return (
+              <div key={company.id} className="tech-card p-5 border-white/5 bg-zinc-900/40 relative overflow-hidden group">
+                <div className="flex justify-between items-start relative z-10">
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-2">
+                      <Factory className="w-4 h-4 text-accent-cyan" />
+                      <span className="text-sm font-bold text-white uppercase">{company.name}</span>
+                      <span className="text-[8px] px-1.5 py-0.5 rounded bg-white/5 text-zinc-500 border border-white/10 uppercase">{company.resource_type}</span>
+                    </div>
+                    <div className="flex gap-4 mt-1">
+                      <div className="flex items-center gap-1.5 grayscale opacity-60">
+                         <Users className="w-3 h-3" />
+                         <span className="text-[9px] font-mono">{company.employees_count || 0} Citizens</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-accent-cyan">
+                         <TrendingUp className="w-3 h-3" />
+                         <span className="text-[9px] font-mono">+{getProduction(company)}/hr Treasury</span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex gap-4 mt-1">
-                    <div className="flex items-center gap-1.5 grayscale opacity-60">
-                       <Users className="w-3 h-3" />
-                       <span className="text-[9px] font-mono">{company.employees_count || 0} Citizens</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-accent-cyan">
-                       <TrendingUp className="w-3 h-3" />
-                       <span className="text-[9px] font-mono">+{getProduction(company)}/hr Treasury</span>
-                    </div>
+                  <div className="flex flex-col items-end">
+                     <div className="flex items-center gap-1">
+                       <span className="text-[9px] font-mono text-zinc-500">LEVEL {company.level}</span>
+                       {/* Upgrade button for Admin/President (Simplified) */}
+                       <button 
+                         onClick={() => handleUpgrade(company)}
+                         disabled={actionLoading?.includes(company.id)}
+                         className="p-1 rounded bg-accent-cyan/10 border border-accent-cyan/20 hover:bg-accent-cyan/20 transition-all"
+                         title={`Upgrade: ${upCost.resources} Res + ${upCost.credits} Credits`}
+                       >
+                         <Hammer className="w-2.5 h-2.5 text-accent-cyan" />
+                       </button>
+                     </div>
+                     <button 
+                      onClick={() => handleWork(company.id)}
+                      disabled={userData.working_at_id === company.id || (userData.working_at_id && userData.working_at_id !== company.id) || actionLoading === company.id}
+                      className={`mt-2 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-tighter transition-all
+                        ${userData.working_at_id === company.id 
+                          ? 'bg-accent-cyan text-black' 
+                          : userData.working_at_id 
+                            ? 'bg-zinc-900 text-zinc-700 cursor-not-allowed opacity-50'
+                            : 'bg-zinc-800 text-white hover:bg-white/10 active:scale-95'}`}
+                     >
+                       {userData.working_at_id === company.id ? 'STATIONED' : userData.working_at_id ? 'LOCKED' : 'ENLIST'}
+                     </button>
                   </div>
                 </div>
-                <div className="flex flex-col items-end">
-                   <span className="text-[9px] font-mono text-zinc-500">LEVEL {company.level}</span>
-                   <button 
-                    onClick={() => handleWork(company.id)}
-                    disabled={userData.working_at_id === company.id || actionLoading === company.id}
-                    className={`mt-2 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-tighter transition-all
-                      ${userData.working_at_id === company.id 
-                        ? 'bg-accent-cyan text-black' 
-                        : 'bg-zinc-800 text-white hover:bg-white/10 active:scale-95'}`}
-                   >
-                     {userData.working_at_id === company.id ? 'EMPLOYED' : 'SIGN CONTRACT'}
-                   </button>
+                <div className="absolute top-0 right-0 p-4 opacity-[0.02] -rotate-12 transform scale-150">
+                   <Shield className="w-24 h-24" />
                 </div>
               </div>
-              <div className="absolute top-0 right-0 p-4 opacity-[0.02] -rotate-12 transform scale-150">
-                 <Shield className="w-24 h-24" />
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
