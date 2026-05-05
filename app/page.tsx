@@ -167,6 +167,51 @@ export default function Dashboard() {
 
   // Removed Live Ticker Logic - Mining is now a button in ProfileSection
 
+  const [regionalMarketData, setRegionalMarketData] = useState<any[]>([]);
+
+  useEffect(() => {
+    async function fetchMarketData() {
+      try {
+        const { data: regions } = await supabase.from('regions').select('*');
+        const { data: stats } = await supabase.from('regional_stats').select('*');
+        
+        if (regions) {
+          const formatted = regions.map(r => {
+            const s = stats?.find(stat => stat.region === r.id);
+            const pop = s?.population || 0;
+            const circ = s?.total_circulation || 0;
+            const ton = r.total_ton_deposited || 0;
+            
+            // Price Formula: Max(1, (Circulation / TON)) * population * 0.01
+            const rawPrice = ton > 0 ? circ / ton : 1;
+            const basePrice = Math.max(1, rawPrice);
+            const finalPrice = basePrice * pop * 0.01;
+            
+            let currency = 'BTX';
+            if (r.id === 'middle_east') currency = 'BTM';
+            if (r.id === 'africa') currency = 'BTF';
+            if (r.id === 'europe') currency = 'BTE';
+            if (r.id === 'asia') currency = 'BTA';
+            if (r.id === 'east_asia') currency = 'BTR';
+
+            return {
+              id: r.id,
+              name: r.name,
+              currency,
+              ton_balance: ton,
+              price: finalPrice,
+              change: '0.0%' 
+            };
+          });
+          setRegionalMarketData(formatted);
+        }
+      } catch (err) {
+        console.error("Dashboard market sync failed", err);
+      }
+    }
+    fetchMarketData();
+  }, []);
+
   const triggerHaptic = () => {
     // @ts-ignore
     window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('medium');
@@ -223,13 +268,6 @@ export default function Dashboard() {
     return <RegionSelector onSelect={handleRegionSelect} />;
   }
 
-  const regions = [
-    { name: 'MIDDLE EAST', currency: 'BTM', price: '1.42', change: '+12.4%', color: 'border-accent-cyan/40 bg-accent-cyan/10' },
-    { name: 'AFRICA', currency: 'BTF', price: '0.64', change: '-2.1%', color: 'border-border-secondary' },
-    { name: 'EUROPE', currency: 'BTE', price: '2.15', change: '+2.1%', color: 'border-border-secondary' },
-    { name: 'ASIA', currency: 'BTA', price: '0.88', change: '-4.2%', color: 'border-border-secondary' },
-    { name: 'EAST ASIA', currency: 'BTR', price: '1.04', change: '0.0%', color: 'border-border-secondary' },
-  ];
 
   return (
     <div className="flex flex-col h-full">
@@ -319,48 +357,58 @@ export default function Dashboard() {
             </div>
 
 
-            {/* Market Quotations */}
-            <section className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500">Economic Zones</h3>
-                <button onClick={() => { setActiveTab('market'); triggerHaptic(); }} className="text-[10px] text-accent-cyan font-mono opacity-80 hover:opacity-100 transition-opacity">VIEW ALL</button>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-3">
-                {regions.slice(0, 4).map((region, i) => (
-                  <motion.button
-                    key={region.name}
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: i * 0.05 }}
-                    onClick={() => { setActiveTab('market'); triggerHaptic(); }}
-                    className="bg-[#111114] border border-border-main p-3 rounded-2xl relative overflow-hidden group text-left active:scale-95 transition-all"
-                  >
-                    <div className="text-[9px] text-gray-500 font-mono mb-1">{region.currency} - {region.name}</div>
-                    <div className="text-lg font-bold group-hover:text-accent-cyan transition-colors">{region.price} TON</div>
-                    <div className={`text-[9px] font-mono ${region.change.startsWith('+') ? 'text-emerald-500' : region.change === '0.0%' ? 'text-gray-400' : 'text-red-500'}`}>
-                      {region.change}
-                    </div>
-                    <div className="absolute -right-2 -bottom-2 w-12 h-12 border border-border-secondary rounded-full opacity-5 group-hover:opacity-20 transition-opacity"></div>
-                  </motion.button>
-                ))}
-              </div>
+              {/* Market Quotations */}
+              <section className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500">Economic Zones</h3>
+                  <button onClick={() => { setActiveTab('market'); triggerHaptic(); }} className="text-[10px] text-accent-cyan font-mono opacity-80 hover:opacity-100 transition-opacity">VIEW ALL</button>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-3">
+                  {(regionalMarketData.length > 0 ? regionalMarketData : []).slice(0, 4).map((region, i) => (
+                    <motion.button
+                      key={region.id}
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: i * 0.05 }}
+                      onClick={() => { setActiveTab('market'); triggerHaptic(); }}
+                      className="bg-[#111114] border border-border-main p-3 rounded-2xl relative overflow-hidden group text-left active:scale-95 transition-all"
+                    >
+                      <div className="text-[9px] text-gray-500 font-mono mb-1">{region.currency} - {region.name.toUpperCase()}</div>
+                      <div className="text-lg font-bold group-hover:text-accent-cyan transition-colors">{region.price.toFixed(4)} TON</div>
+                      <div className={`text-[9px] font-mono ${region.change.startsWith('+') ? 'text-emerald-500' : region.change === '0.0%' ? 'text-gray-400' : 'text-red-500'}`}>
+                        {region.change}
+                      </div>
+                      <div className="absolute -right-2 -bottom-2 w-12 h-12 border border-border-secondary rounded-full opacity-5 group-hover:opacity-20 transition-opacity"></div>
+                    </motion.button>
+                  ))}
+                </div>
 
-              {/* Africa Special Row */}
-              <div className="bg-[#111114] border border-border-main p-3 rounded-2xl flex items-center justify-between">
-                <div className="flex flex-col">
-                  <div className="text-[9px] text-gray-500 font-mono mb-1">BTF - AFRICA</div>
-                  <div className="text-lg font-bold">0.64 TON</div>
+                {/* Regional Highlight Row */}
+                <div className="bg-[#111114] border border-border-main p-3 rounded-2xl flex items-center justify-between">
+                  {regionalMarketData.find(r => r.id === (userData?.region || 'middle_east')) ? (
+                    <>
+                      <div className="flex flex-col">
+                        <div className="text-[9px] text-gray-500 font-mono mb-1">
+                          {regionalMarketData.find(r => r.id === (userData?.region || 'middle_east'))?.currency} - CURRENT SECTOR
+                        </div>
+                        <div className="text-lg font-bold">
+                          {regionalMarketData.find(r => r.id === (userData?.region || 'middle_east'))?.price.toFixed(4)} TON
+                        </div>
+                      </div>
+                      <div className="flex gap-1 items-end">
+                        <div className="w-1 h-3 bg-border-secondary"></div>
+                        <div className="w-1 h-5 bg-accent-cyan/60"></div>
+                        <div className="w-1 h-2 bg-border-secondary"></div>
+                        <div className="w-1 h-4 bg-accent-cyan"></div>
+                        <div className="w-1 h-6 bg-accent-cyan/80"></div>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-[10px] text-zinc-600 font-mono italic">Synchronizing tactical data...</div>
+                  )}
                 </div>
-                <div className="flex gap-1 items-end">
-                  <div className="w-1 h-3 bg-border-secondary"></div>
-                  <div className="w-1 h-5 bg-accent-cyan/60"></div>
-                  <div className="w-1 h-2 bg-border-secondary"></div>
-                  <div className="w-1 h-4 bg-accent-cyan"></div>
-                  <div className="w-1 h-6 bg-accent-cyan/80"></div>
-                </div>
-              </div>
-            </section>
+              </section>
 
             {/* Strategic Map View */}
             <section className="space-y-4 pb-8">
@@ -377,11 +425,11 @@ export default function Dashboard() {
                 onClick={() => { setActiveTab('economy'); triggerHaptic(); }}
                 className="grid grid-cols-5 gap-1.5 h-16 w-full group active:scale-[0.98] transition-all"
               >
-                {regions.map((region, i) => (
+                {regionalMarketData.map((region, i) => (
                   <div 
-                    key={region.currency}
+                    key={region.id}
                     className={`rounded-lg border flex items-center justify-center text-[9px] font-bold transition-all
-                      ${region.name === (userData?.region?.replace('_', ' ').toUpperCase()) || region.name === 'MIDDLE EAST' 
+                      ${region.id === (userData?.region) 
                         ? 'bg-accent-cyan/10 border-accent-cyan/40 text-accent-cyan shadow-[0_0_10px_rgba(0,255,209,0.2)]' 
                         : 'bg-[#151518] border-border-secondary text-gray-600'
                       }`}
