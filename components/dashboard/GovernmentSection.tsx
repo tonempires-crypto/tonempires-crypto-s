@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { 
   Users, 
   ShieldAlert, 
@@ -10,8 +10,10 @@ import {
   Coins, 
   AlertCircle,
   GanttChartSquare,
-  Swords
+  Swords,
+  RefreshCw
 } from 'lucide-react';
+import { supabase } from '@/lib/supabaseClient';
 
 interface GovernmentSectionProps {
   userData: any;
@@ -20,6 +22,9 @@ interface GovernmentSectionProps {
 
 export default function GovernmentSection({ userData, resources }: GovernmentSectionProps) {
   const region = userData?.region || 'middle_east';
+  const [stats, setStats] = useState({ population: 0, totalCirculation: 0, totalTonDeposited: 0 });
+  const [reserves, setReserves] = useState({ oil: 0, gold: 0, iron: 0, wheat: 0 });
+  const [loading, setLoading] = useState(true);
   
   const regionData = useMemo(() => {
     switch (region) {
@@ -32,17 +37,55 @@ export default function GovernmentSection({ userData, resources }: GovernmentSec
     }
   }, [region]);
 
-  // Mocked global stats for logic demonstration 
-  // (In production these would be fetched from aggregated SQL views)
-  const population = 1250; // Mock total regional users
-  const totalCirculation = 450000; // Total BT(X) mined by all citizens
-  const totalTonDeposited = 150; // Total TON locked in treasury
+  useEffect(() => {
+    async function fetchStats() {
+      setLoading(true);
+      try {
+        // Fetch real-time aggregated stats from our view
+        const { data: statsData } = await supabase
+          .from('regional_stats')
+          .select('*')
+          .eq('region', region)
+          .single();
+
+        // Fetch regional treasury reserves
+        const { data: regionData } = await supabase
+          .from('regions')
+          .select('*')
+          .eq('id', region)
+          .single();
+
+        if (statsData) {
+          setStats({
+            population: statsData.population || 0,
+            totalCirculation: statsData.total_circulation || 0,
+            totalTonDeposited: regionData?.total_ton_deposited || 0
+          });
+        }
+
+        if (regionData) {
+          setReserves({
+            oil: regionData.oil_reserve || 0,
+            gold: regionData.gold_reserve || 0,
+            iron: regionData.iron_reserve || 0,
+            wheat: regionData.wheat_reserve || 0
+          });
+        }
+      } catch (e) {
+        console.error("Failed to fetch regional stats", e);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    if (region) fetchStats();
+  }, [region]);
   
   // Price Formula: (Total amount mined by citizens) ÷ (Total TONs deposited) 
   // Minimum 1, then multiplied by population * 0.01
-  const rawPrice = totalTonDeposited > 0 ? totalCirculation / totalTonDeposited : 1;
+  const rawPrice = stats.totalTonDeposited > 0 ? stats.totalCirculation / stats.totalTonDeposited : 1;
   const basePrice = Math.max(1, rawPrice);
-  const finalPrice = basePrice * population * 0.01;
+  const finalPrice = basePrice * stats.population * 0.01;
 
   const roles = [
     { title: 'President', icon: Users, status: 'Coming Soon' },
@@ -50,12 +93,14 @@ export default function GovernmentSection({ userData, resources }: GovernmentSec
     { title: 'Army Commander', icon: Swords, status: 'Coming Soon' }
   ];
 
-  const regionTreasury = {
-    oil: 4520,
-    gold: 1240,
-    iron: 8900,
-    wheat: 15600
-  };
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-48 space-y-4">
+        <RefreshCw className="w-8 h-8 text-accent-cyan animate-spin" />
+        <span className="text-[10px] font-mono text-zinc-500 uppercase">Synchronizing Sovereign Data...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 pb-24 h-full overflow-y-auto px-1">
@@ -65,7 +110,7 @@ export default function GovernmentSection({ userData, resources }: GovernmentSec
           <MapPin className={`w-5 h-5 ${regionData.color}`} />
           <h2 className="text-xl font-black tracking-tight">{regionData.name} State Treasury</h2>
         </div>
-        <p className="text-xs text-zinc-400 font-mono italic">Sector Security: High Alert Phase 2</p>
+        <p className="text-xs text-zinc-400 font-mono italic">Sector Security: Operational</p>
       </div>
 
       {/* Leadership Section */}
@@ -95,7 +140,7 @@ export default function GovernmentSection({ userData, resources }: GovernmentSec
             <Coins className="w-4 h-4 text-accent-orange" />
             <span className="text-[10px] font-mono text-zinc-500 uppercase">In Circulation</span>
           </div>
-          <div className="text-xl font-black text-white">{totalCirculation.toLocaleString()} {regionData.currency}</div>
+          <div className="text-xl font-black text-white">{stats.totalCirculation.toLocaleString()} {regionData.currency}</div>
           <div className="text-[9px] text-zinc-600 mt-1 uppercase">Global Supply Block</div>
         </div>
 
@@ -117,14 +162,14 @@ export default function GovernmentSection({ userData, resources }: GovernmentSec
         </div>
         
         <div className="grid grid-cols-2 gap-y-6 gap-x-8">
-          {Object.entries(regionTreasury).map(([key, val]) => (
+          {Object.entries(reserves).map(([key, val]) => (
             <div key={key} className="flex flex-col border-l border-white/5 pl-4">
               <span className="text-[10px] font-mono text-zinc-500 uppercase mb-1">{key}</span>
               <span className="text-lg font-bold text-white leading-none">{val.toLocaleString()}</span>
               <div className="w-full h-1 bg-zinc-800 mt-2 rounded-full overflow-hidden">
                 <div 
                   className="h-full bg-zinc-600" 
-                  style={{ width: `${Math.min(100, (val / 20000) * 100)}%` }}
+                  style={{ width: `${Math.min(100, (val / 1000) * 100)}%` }}
                 />
               </div>
             </div>
@@ -136,7 +181,7 @@ export default function GovernmentSection({ userData, resources }: GovernmentSec
       <div className="p-4 rounded-xl bg-black/40 border border-white/5 flex items-start gap-3">
         <AlertCircle className="w-5 h-5 text-zinc-600 flex-shrink-0" />
         <p className="text-[10px] text-zinc-500 leading-relaxed italic">
-          Currency price is calculated using physical TON backing against circulating supply, weighted by current citizenship population ({population}). All figures are updated per node cycle.
+          Currency price is calculated using physical TON backing against circulating supply, weighted by current citizenship population ({stats.population}). All figures are updated per node cycle.
         </p>
       </div>
     </div>
