@@ -443,7 +443,11 @@ export default function Dashboard() {
         ) : activeTab === 'market' ? (
           <MarketSection />
         ) : activeTab === 'trade' ? (
-          <TradeSection />
+          <TradeSection 
+            userData={userData}
+            resources={resources}
+            onTradeSuccess={(newRes) => setResources(newRes)}
+          />
         ) : activeTab === 'tasks' ? (
           <TasksSection />
         ) : activeTab === 'invite' ? (

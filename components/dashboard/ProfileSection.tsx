@@ -10,11 +10,56 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
   const walletAddress = useTonAddress();
   const [referralCount, setReferralCount] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [promoting, setPromoting] = useState(false);
   const [timeLeft, setTimeLeft] = useState<number>(0);
 
   // Sync wallet address to DB
   const [manualWallet, setManualWallet] = useState('');
   const [showManual, setShowManual] = useState(false);
+
+  // Job system logic
+  const jobRanks = [
+    { title: 'Alpha Apprentice', level: 1, req: 0 },
+    { title: 'Sector Specialist', level: 2, req: 200 },
+    { title: 'Regional Supervisor', level: 3, req: 800 },
+    { title: 'Imperial Director', level: 4, req: 2500 }
+  ];
+
+  const currentRankIndex = userData?.job_level ? userData.job_level - 1 : 0;
+  const nextRank = jobRanks[currentRankIndex + 1];
+
+  const handlePromote = async () => {
+    if (!nextRank || promoting) return;
+    
+    const req = nextRank.req;
+    if (resources.oil < req || resources.gold < req || resources.iron < req || resources.wheat < req) {
+      alert(`Promotion requires ${req} of ALL resources.`);
+      return;
+    }
+
+    setPromoting(true);
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({
+          job_level: nextRank.level,
+          oil: resources.oil - req,
+          gold: resources.gold - req,
+          iron: resources.iron - req,
+          wheat: resources.wheat - req
+        })
+        .eq('telegram_id', userData.telegram_id);
+
+      if (error) throw error;
+      alert(`PROMOTED TO ${nextRank.title.toUpperCase()}! Your influence grows.`);
+      window.location.reload(); // Refresh to update all stats
+    } catch (e) {
+      console.error(e);
+      alert("Promotion failed. Registry link unstable.");
+    } finally {
+      setPromoting(false);
+    }
+  };
 
   useEffect(() => {
     const syncWallet = async () => {
@@ -140,7 +185,9 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
         <div>
           <h2 className="text-2xl font-black tracking-tight">@{userData?.username || 'Citizen'}</h2>
           <div className="flex items-center justify-center gap-2 mt-1">
-            <span className="px-2 py-0.5 rounded bg-accent-cyan/10 border border-accent-cyan/20 text-[10px] font-mono text-accent-cyan uppercase tracking-widest">Citizen Rank: Alpha</span>
+            <span className="px-2 py-0.5 rounded bg-accent-cyan/10 border border-accent-cyan/20 text-[10px] font-mono text-accent-cyan uppercase tracking-widest">
+              {jobRanks[currentRankIndex]?.title || 'Alpha Apprentice'}
+            </span>
           </div>
         </div>
       </div>
@@ -161,6 +208,36 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
           Actively mining {regionalCurrency.code} for the {userData?.region?.replace('_', ' ').toUpperCase()} Empire
         </div>
       </div>
+
+      {/* Promotion Logic UI */}
+      {nextRank && (
+        <div className="tech-card border-white/10 bg-zinc-900/50 p-5">
+          <div className="flex justify-between items-center mb-4">
+            <div className="flex flex-col">
+              <span className="text-[10px] font-mono text-zinc-500 uppercase">Next Rank</span>
+              <span className="text-sm font-bold text-white uppercase">{nextRank.title}</span>
+            </div>
+            <button 
+              onClick={handlePromote}
+              disabled={promoting}
+              className="px-4 py-2 bg-accent-orange text-black rounded-lg text-[10px] font-black uppercase tracking-tighter hover:brightness-110 active:scale-95 transition-all disabled:opacity-50"
+            >
+              {promoting ? 'PROCESSING...' : 'REQUEST PROMOTION'}
+            </button>
+          </div>
+          <div className="space-y-2">
+            <div className="flex justify-between text-[8px] font-mono text-zinc-500 uppercase">
+              <span>Required Resources</span>
+              <span>{nextRank.req} of each</span>
+            </div>
+            <div className="grid grid-cols-4 gap-1">
+              {['oil', 'gold', 'iron', 'wheat'].map(res => (
+                <div key={res} className={`h-1 rounded-full ${resources[res] >= nextRank.req ? 'bg-accent-cyan' : 'bg-zinc-800'}`} />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Hourly Mining Button */}
       <div className="tech-card border-accent-cyan/40 bg-accent-cyan/5 p-6 relative overflow-hidden">
@@ -262,8 +339,10 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
             <Briefcase className="w-4 h-4 text-accent-orange" />
             <span className="text-[9px] font-mono text-zinc-500 uppercase">Employment</span>
           </div>
-          <div className="text-sm font-bold text-white uppercase italic">Independent</div>
-          <p className="text-[8px] text-zinc-500 leading-tight">Product Co. Contracts: Coming Soon</p>
+          <div className="text-sm font-bold text-white uppercase italic">
+            {(userData?.region || 'Imperial').replace('_', ' ')} Enterprise
+          </div>
+          <p className="text-[8px] text-zinc-500 leading-tight">Sector production contract active</p>
         </div>
       </div>
 

@@ -25,6 +25,8 @@ export default function GovernmentSection({ userData, resources }: GovernmentSec
   const [stats, setStats] = useState({ population: 0, totalCirculation: 0, totalTonDeposited: 0 });
   const [reserves, setReserves] = useState({ oil: 0, gold: 0, iron: 0, wheat: 0 });
   const [loading, setLoading] = useState(true);
+  const [donating, setDonating] = useState(false);
+  const [donationSuccess, setDonationSuccess] = useState(false);
   
   const regionData = useMemo(() => {
     switch (region) {
@@ -37,49 +39,82 @@ export default function GovernmentSection({ userData, resources }: GovernmentSec
     }
   }, [region]);
 
-  useEffect(() => {
-    async function fetchStats() {
-      setLoading(true);
-      try {
-        // Fetch real-time aggregated stats from our view
-        const { data: statsData } = await supabase
-          .from('regional_stats')
-          .select('*')
-          .eq('region', region)
-          .single();
+  const fetchStats = async () => {
+    try {
+      // Fetch real-time aggregated stats
+      const { data: statsData } = await supabase
+        .from('regional_stats')
+        .select('*')
+        .eq('region', region)
+        .single();
 
-        // Fetch regional treasury reserves
-        const { data: regionData } = await supabase
-          .from('regions')
-          .select('*')
-          .eq('id', region)
-          .single();
+      // Fetch regional treasury reserves
+      const { data: regionData } = await supabase
+        .from('regions')
+        .select('*')
+        .eq('id', region)
+        .single();
 
-        if (statsData) {
-          setStats({
-            population: statsData.population || 0,
-            totalCirculation: statsData.total_circulation || 0,
-            totalTonDeposited: regionData?.total_ton_deposited || 0
-          });
-        }
-
-        if (regionData) {
-          setReserves({
-            oil: regionData.oil_reserve || 0,
-            gold: regionData.gold_reserve || 0,
-            iron: regionData.iron_reserve || 0,
-            wheat: regionData.wheat_reserve || 0
-          });
-        }
-      } catch (e) {
-        console.error("Failed to fetch regional stats", e);
-      } finally {
-        setLoading(false);
+      if (statsData) {
+        setStats({
+          population: statsData.population || 0,
+          totalCirculation: statsData.total_circulation || 0,
+          totalTonDeposited: regionData?.total_ton_deposited || 0
+        });
       }
-    }
 
+      if (regionData) {
+        setReserves({
+          oil: regionData.oil_reserve || 0,
+          gold: regionData.gold_reserve || 0,
+          iron: regionData.iron_reserve || 0,
+          wheat: regionData.wheat_reserve || 0
+        });
+      }
+    } catch (e) {
+      console.error("Failed to fetch regional stats", e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     if (region) fetchStats();
   }, [region]);
+
+  const handleDonate = async (resourceType: string, amount: number) => {
+    if (donating || resources[resourceType] < amount) return;
+    setDonating(true);
+    
+    try {
+      // 1. Subtract from user
+      const { error: userErr } = await supabase
+        .from('users')
+        .update({ [resourceType]: resources[resourceType] - amount })
+        .eq('telegram_id', userData.telegram_id);
+
+      if (userErr) throw userErr;
+
+      // 2. Add to treasury (In a real app, this should be an RPC to ensure atomicity)
+      const { error: regionErr } = await supabase.rpc('donate_to_region', {
+        p_region: region,
+        p_resource: resourceType,
+        p_amount: amount,
+        p_user_id: userData.telegram_id
+      });
+
+      if (regionErr) throw regionErr;
+
+      setDonationSuccess(true);
+      setTimeout(() => setDonationSuccess(false), 3000);
+      fetchStats(); // Refresh reserves
+    } catch (e) {
+      console.error("Donation failed", e);
+      alert("State Transaction Error: Ensure sufficient resources.");
+    } finally {
+      setDonating(false);
+    }
+  };
   
   // Price Formula: (Total amount mined by citizens) ÷ (Total TONs deposited) 
   // Minimum 1, then multiplied by population * 0.01
@@ -133,6 +168,21 @@ export default function GovernmentSection({ userData, resources }: GovernmentSec
         ))}
       </div>
 
+      {/* Military Command Section (COMING SOON but backend ready) */}
+      <div className="tech-card p-5 border-red-900/20 bg-red-950/10 border-dashed">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <ShieldAlert className="w-5 h-5 text-red-500" />
+            <h3 className="text-xs font-mono uppercase tracking-[0.2em] text-red-500">Military Command</h3>
+          </div>
+          <span className="text-[9px] font-mono text-zinc-600 uppercase">Strategic Reserves Required</span>
+        </div>
+        <div className="flex flex-col items-center justify-center py-4 gap-2">
+          <span className="text-2xl font-black text-white/20 tracking-tighter uppercase italic">Defend the Empire</span>
+          <span className="text-[10px] text-red-800 font-bold uppercase animate-pulse">Coming soon</span>
+        </div>
+      </div>
+
       {/* Regional Macro Stats */}
       <div className="grid grid-cols-2 gap-4">
         <div className="tech-card p-5 border-accent-orange/20 bg-accent-orange/5">
@@ -154,6 +204,43 @@ export default function GovernmentSection({ userData, resources }: GovernmentSec
         </div>
       </div>
 
+      {/* Patriotism System: Donate to State */}
+      <div className="tech-card p-6 border-white/10 bg-zinc-900/50">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex flex-col">
+            <h3 className="text-xs font-mono uppercase tracking-[0.2em] text-accent-cyan">Patriotism System</h3>
+            <span className="text-[9px] text-zinc-500 uppercase">Support your region treasury</span>
+          </div>
+          <div className="flex flex-col items-end">
+             <span className="text-[10px] font-mono text-zinc-400">PATRIOT POINTS</span>
+             <span className="text-lg font-black text-white">{userData?.patriot_points || 0}</span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          {['oil', 'gold', 'iron', 'wheat'].map((res) => (
+             <button
+               key={res}
+               onClick={() => handleDonate(res, 50)}
+               disabled={donating || (resources[res] || 0) < 50}
+               className={`p-3 rounded-xl border flex flex-col items-center gap-1 transition-all active:scale-95
+                 ${(resources[res] || 0) >= 50 
+                   ? 'border-white/10 bg-white/5 hover:bg-accent-cyan/10 hover:border-accent-cyan/30' 
+                   : 'border-white/5 bg-transparent opacity-40 grayscale pointer-events-none'}`}
+             >
+               <span className="text-[8px] font-mono text-zinc-500 uppercase">{res}</span>
+               <span className="text-xs font-bold text-white">Donate 50</span>
+               <span className="text-[8px] text-accent-cyan font-mono">+10 Points</span>
+             </button>
+          ))}
+        </div>
+        {donationSuccess && (
+          <div className="mt-4 text-center text-[10px] font-mono text-accent-cyan animate-bounce">
+            TREASURY DONATION VERIFIED. PATRIOTISM MULTIPLIER ACTIVE.
+          </div>
+        )}
+      </div>
+
       {/* State Strategic Reserves */}
       <div className="tech-card p-6 border-white/5">
         <div className="flex items-center gap-2 mb-6">
@@ -169,7 +256,7 @@ export default function GovernmentSection({ userData, resources }: GovernmentSec
               <div className="w-full h-1 bg-zinc-800 mt-2 rounded-full overflow-hidden">
                 <div 
                   className="h-full bg-zinc-600" 
-                  style={{ width: `${Math.min(100, (val / 1000) * 100)}%` }}
+                  style={{ width: `${Math.min(100, (val / 5000) * 100)}%` }}
                 />
               </div>
             </div>
