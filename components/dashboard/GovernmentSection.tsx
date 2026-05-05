@@ -22,7 +22,7 @@ interface GovernmentSectionProps {
 
 export default function GovernmentSection({ userData, resources }: GovernmentSectionProps) {
   const region = userData?.region || 'middle_east';
-  const [stats, setStats] = useState({ population: 0, totalCirculation: 0, totalTonDeposited: 0 });
+  const [stats, setStats] = useState({ population: 0, totalCirculation: 0, totalTonDeposited: 0, taxTreasury: 0 });
   const [reserves, setReserves] = useState({ oil: 0, gold: 0, iron: 0, wheat: 0 });
   const [loading, setLoading] = useState(true);
   const [donating, setDonating] = useState(false);
@@ -59,7 +59,8 @@ export default function GovernmentSection({ userData, resources }: GovernmentSec
         setStats({
           population: statsData.population || 0,
           totalCirculation: statsData.total_circulation || 0,
-          totalTonDeposited: regionData?.total_ton_deposited || 0
+          totalTonDeposited: regionData?.total_ton_deposited || 0,
+          taxTreasury: regionData?.tax_treasury || 0
         });
       }
 
@@ -185,6 +186,15 @@ export default function GovernmentSection({ userData, resources }: GovernmentSec
 
       {/* Regional Macro Stats */}
       <div className="grid grid-cols-2 gap-4">
+        <div className="tech-card p-5 border-accent-cyan/20 bg-accent-cyan/5">
+          <div className="flex items-center gap-2 mb-2">
+            <Landmark className="w-4 h-4 text-accent-cyan" />
+            <h3 className="text-[10px] font-mono uppercase tracking-[0.2em] text-accent-cyan">Tax Treasury</h3>
+          </div>
+          <div className="text-xl font-black text-white">{stats.taxTreasury.toLocaleString()} {regionData.currency}</div>
+          <div className="text-[9px] text-zinc-600 mt-1 uppercase">Sovereign Collected Dues</div>
+        </div>
+
         <div className="tech-card p-5 border-accent-orange/20 bg-accent-orange/5">
           <div className="flex items-center gap-2 mb-2">
             <Coins className="w-4 h-4 text-accent-orange" />
@@ -193,15 +203,15 @@ export default function GovernmentSection({ userData, resources }: GovernmentSec
           <div className="text-xl font-black text-white">{stats.totalCirculation.toLocaleString()} {regionData.currency}</div>
           <div className="text-[9px] text-zinc-600 mt-1 uppercase">Global Supply Block</div>
         </div>
+      </div>
 
-        <div className="tech-card p-5 border-accent-cyan/20 bg-accent-cyan/5">
-          <div className="flex items-center gap-2 mb-2">
-            <TrendingUp className="w-4 h-4 text-accent-cyan" />
-            <span className="text-[10px] font-mono text-zinc-500 uppercase">Market Value</span>
-          </div>
-          <div className="text-xl font-black text-accent-cyan">${finalPrice.toFixed(4)}</div>
-          <div className="text-[9px] text-zinc-600 mt-1 uppercase">TON Indexed Yield</div>
+      <div className="tech-card p-5 border-accent-cyan/20 bg-accent-cyan/5">
+        <div className="flex items-center gap-2 mb-2">
+          <TrendingUp className="w-4 h-4 text-accent-cyan" />
+          <span className="text-[10px] font-mono text-zinc-500 uppercase">Market Value</span>
         </div>
+        <div className="text-xl font-black text-accent-cyan">${finalPrice.toFixed(4)}</div>
+        <div className="text-[9px] text-zinc-600 mt-1 uppercase">TON Indexed Yield</div>
       </div>
 
       {/* Patriotism System: Donate to State */}

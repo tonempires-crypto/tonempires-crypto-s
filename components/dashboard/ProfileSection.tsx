@@ -123,7 +123,9 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
 
     const boost = 1 + (referralCount * 0.05);
     const gain = 3600 * boost; // 1 hour worth of mining in one go
-    const currencyGain = 10 * boost; // Standard regional currency yield per hour
+    const totalYield = 10 * boost; 
+    const taxDeduction = totalYield * 0.20;
+    const userNetYield = totalYield - taxDeduction;
 
     const newResources = {
       oil: (resources.oil || 0) + (miningRates.oil * gain),
@@ -131,23 +133,44 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
       iron: (resources.iron || 0) + (miningRates.iron * gain),
       wheat: (resources.wheat || 0) + (miningRates.wheat * gain),
       ton: resources.ton,
-      localCurrency: (resources.localCurrency || 0) + currencyGain
+      localCurrency: (resources.localCurrency || 0) + userNetYield
     };
 
-    const { error } = await supabase
-      .from('users')
-      .update({
-        oil: newResources.oil,
-        gold: newResources.gold,
-        iron: newResources.iron,
-        wheat: newResources.wheat,
-        local_currency_balance: newResources.localCurrency,
-        last_claim: new Date().toISOString()
-      })
-      .eq('telegram_id', userData.telegram_id);
+    try {
+      // 1. Update User Resources
+      const { error: userError } = await supabase
+        .from('users')
+        .update({
+          oil: newResources.oil,
+          gold: newResources.gold,
+          iron: newResources.iron,
+          wheat: newResources.wheat,
+          local_currency_balance: newResources.localCurrency,
+          last_claim: new Date().toISOString()
+        })
+        .eq('telegram_id', userData.telegram_id);
 
-    if (!error) {
+      if (userError) throw userError;
+
+      // 2. Transmit Tax to Regional Treasury
+      // We increment the tax_treasury column for the user's region
+      const { data: regionData } = await supabase
+        .from('regions')
+        .select('tax_treasury')
+        .eq('id', userData.region)
+        .single();
+      
+      const currentTax = regionData?.tax_treasury || 0;
+      
+      await supabase
+        .from('regions')
+        .update({ tax_treasury: currentTax + taxDeduction })
+        .eq('id', userData.region);
+
       onClaimSuccess(newResources);
+    } catch (err) {
+      console.error("Mining Sync Failure:", err);
+      alert("Mining Interrupted: Neural link unstable.");
     }
     setLoading(false);
   };
@@ -262,7 +285,7 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
           </button>
           
           <p className="text-[9px] font-mono text-zinc-500">
-            Yield calculated at 0.01 base + regional modifiers + { (referralCount * 5) }% referral boost
+            Yield calculated at 10 base + regional modifiers + { (referralCount * 5) }% referral boost
           </p>
         </div>
       </div>
