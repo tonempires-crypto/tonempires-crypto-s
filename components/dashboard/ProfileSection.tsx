@@ -154,18 +154,23 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
 
       // 2. Transmit Tax to Regional Treasury
       // We increment the tax_treasury column for the user's region
+      const targetRegion = userData.region || 'middle_east';
       const { data: regionData } = await supabase
         .from('regions')
         .select('tax_treasury')
-        .eq('id', userData.region)
+        .eq('id', targetRegion)
         .single();
       
       const currentTax = regionData?.tax_treasury || 0;
       
-      await supabase
+      const { error: treasuryError } = await supabase
         .from('regions')
         .update({ tax_treasury: currentTax + taxDeduction })
-        .eq('id', userData.region);
+        .eq('id', targetRegion);
+
+      if (treasuryError) {
+        console.error("Treasury Transmission Error:", treasuryError);
+      }
 
       onClaimSuccess(newResources);
     } catch (err) {
@@ -182,15 +187,15 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
   };
 
   const boost = referralCount * 0.05;
-  const totalMining = Object.values(miningRates).reduce((a: any, b: any) => a + b, 0) as number;
-  const boostedMining = totalMining * (1 + boost);
+  const baseRate = 10;
+  const boostedMining = baseRate * (1 + boost);
 
   const getRegionalCurrency = (region: string) => {
     switch (region) {
       case 'middle_east': return { name: 'Middle East Dinar', code: 'BTM', color: 'text-accent-cyan' };
       case 'africa': return { name: 'African Credits', code: 'BTF', color: 'text-amber-500' };
       case 'europe': return { name: 'Euro-Sovereign', code: 'BTE', color: 'text-blue-500' };
-      case 'asia': return { name: 'Asian Yuan-B', code: 'BTA', codeColor: 'text-red-500' };
+      case 'asia': return { name: 'Asian Yuan-B', code: 'BTA', color: 'text-red-500' };
       case 'east_asia': return { name: 'East Asian Yen', code: 'BTR', color: 'text-purple-500' };
       default: return { name: 'Imperial Credits', code: 'BTX', color: 'text-zinc-500' };
     }

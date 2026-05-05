@@ -365,7 +365,7 @@ export default function Dashboard() {
                 </div>
                 
                 <div className="grid grid-cols-2 gap-3">
-                  {(regionalMarketData.length > 0 ? regionalMarketData : []).slice(0, 4).map((region, i) => (
+                  {(regionalMarketData.length > 0 ? regionalMarketData : []).slice(0, 5).map((region, i) => (
                     <motion.button
                       key={region.id}
                       initial={{ opacity: 0, scale: 0.95 }}
