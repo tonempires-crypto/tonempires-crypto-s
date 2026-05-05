@@ -1,7 +1,7 @@
 'use client';
 
 import { TonConnectButton, useTonConnectUI } from '@tonconnect/ui-react';
-import { Wallet, Settings, TrendingUp, Map as MapIcon, ChevronRight, Zap, Loader2, CreditCard } from 'lucide-react';
+import { Wallet, Settings, TrendingUp, Map as MapIcon, ChevronRight, Zap, Loader2, CreditCard, Factory } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
@@ -13,6 +13,7 @@ import TasksSection from '@/components/dashboard/TasksSection';
 import ProfileSection from '@/components/dashboard/ProfileSection';
 import RegionEconomySection from '@/components/dashboard/RegionEconomySection';
 import GovernmentSection from '@/components/dashboard/GovernmentSection';
+import CompaniesSection from '@/components/dashboard/CompaniesSection';
 
 export default function Dashboard() {
   const [userName, setUserName] = useState('jdoe_trading');
@@ -462,6 +463,11 @@ export default function Dashboard() {
               setUserData((prev: any) => ({ ...prev, last_claim: new Date().toISOString() }));
             }}
           />
+        ) : activeTab === 'companies' ? (
+          <CompaniesSection 
+            userData={userData}
+            resources={resources}
+          />
         ) : activeTab === 'gov' ? (
           <GovernmentSection 
             userData={userData}
@@ -489,6 +495,15 @@ export default function Dashboard() {
         >
           <div className={`w-5 h-5 rounded-sm transition-all duration-300 ${activeTab === 'market' ? 'bg-accent-cyan shadow-[0_0_15px_rgba(0,255,209,0.6)]' : 'border border-zinc-600'}`}></div>
           <span className="text-[9px] font-bold tracking-tighter">MARKET</span>
+        </button>
+        <button 
+          onClick={() => { setActiveTab('companies'); triggerHaptic(); }}
+          className={`group flex flex-col items-center gap-1 transition-all active:scale-90 ${activeTab === 'companies' ? 'text-accent-cyan' : 'text-zinc-500'}`}
+        >
+          <div className={`w-5 h-5 rounded-sm transition-all duration-300 ${activeTab === 'companies' ? 'bg-accent-cyan shadow-[0_0_15px_rgba(0,255,209,0.6)]' : 'border border-zinc-600'}`}>
+            <Factory className={`w-3 h-3 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 ${activeTab === 'companies' ? 'text-black' : 'text-zinc-500'}`} />
+          </div>
+          <span className="text-[9px] font-bold tracking-tighter uppercase whitespace-nowrap">Industry</span>
         </button>
         <button 
           onClick={() => { setActiveTab('gov'); triggerHaptic(); }}
