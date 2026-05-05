@@ -12,6 +12,7 @@ import TradeSection from '@/components/dashboard/TradeSection';
 import TasksSection from '@/components/dashboard/TasksSection';
 import ProfileSection from '@/components/dashboard/ProfileSection';
 import RegionEconomySection from '@/components/dashboard/RegionEconomySection';
+import GovernmentSection from '@/components/dashboard/GovernmentSection';
 
 export default function Dashboard() {
   const [userName, setUserName] = useState('jdoe_trading');
@@ -409,6 +410,11 @@ export default function Dashboard() {
               setUserData((prev: any) => ({ ...prev, last_claim: new Date().toISOString() }));
             }}
           />
+        ) : activeTab === 'gov' ? (
+          <GovernmentSection 
+            userData={userData}
+            resources={resources}
+          />
         ) : activeTab === 'economy' ? (
           <RegionEconomySection regionId={userData?.region || 'middle_east'} />
         ) : (
@@ -431,6 +437,13 @@ export default function Dashboard() {
         >
           <div className={`w-5 h-5 rounded-sm transition-all duration-300 ${activeTab === 'market' ? 'bg-accent-cyan shadow-[0_0_15px_rgba(0,255,209,0.6)]' : 'border border-zinc-600'}`}></div>
           <span className="text-[9px] font-bold tracking-tighter">MARKET</span>
+        </button>
+        <button 
+          onClick={() => { setActiveTab('gov'); triggerHaptic(); }}
+          className={`group flex flex-col items-center gap-1 transition-all active:scale-90 ${activeTab === 'gov' ? 'text-accent-cyan' : 'text-zinc-500'}`}
+        >
+          <div className={`w-5 h-5 rounded-sm transition-all duration-300 ${activeTab === 'gov' ? 'bg-accent-cyan shadow-[0_0_15px_rgba(0,255,209,0.6)]' : 'border border-zinc-600'}`}></div>
+          <span className="text-[9px] font-bold tracking-tighter">EMPIRE</span>
         </button>
         <button 
           onClick={() => { setActiveTab('trade'); triggerHaptic(); }}
