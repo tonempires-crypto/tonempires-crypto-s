@@ -118,11 +118,19 @@ export default function Dashboard() {
 
         if (data) {
           setUserData(data);
+          
+          // Fetch Real Private Resources from user_resources table
+          const { data: resData } = await supabase
+            .from('user_resources')
+            .select('*')
+            .eq('telegram_id', user.id)
+            .maybeSingle();
+
           setResources({
-            oil: data.oil || 0,
-            gold: data.gold || 0,
-            iron: data.iron || 0,
-            wheat: data.wheat || 0,
+            oil: resData?.oil || 0,
+            gold: resData?.gold || 0,
+            iron: resData?.iron || 0,
+            wheat: resData?.wheat || 0,
             ton: data.ton_balance || 0,
             localCurrency: data.local_currency_balance || 0
           });
