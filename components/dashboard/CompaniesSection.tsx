@@ -44,8 +44,20 @@ export default function CompaniesSection({ userData, resources }: CompaniesSecti
       if (gov.length === 0) {
         console.warn("NO GOVERNMENT COMPANIES FOUND. ATTEMPTING AUTO-SEED...");
         const resourceTypes = ['oil', 'gold', 'iron', 'wheat'];
-        const newGovs = resourceTypes.map(type => ({
-          name: `Imperial ${type.charAt(0).toUpperCase() + type.slice(1)} Extraction`,
+        
+        // Better region-specific names
+        const names: Record<string, string[]> = {
+          'middle_east': ['ME National Petroleum', 'ME Imperial Gold', 'ME Steel Works', 'ME Ceres Grain'],
+          'africa': ['Pan-African Diamond Syndicate', 'Central Gold Reserve', 'Delta Oil Consortium', 'Savannah Grain Trust'],
+          'europe': ['Euro-Iron Foundries', 'Alps Mineral Core', 'North Sea Energy', 'Rhine Agricultural Hub'],
+          'asia': ['Eastern Dragon Minerals', 'Silk Road Textiles', 'Pacific Energy Grid', 'Yangtze Wheat Fields'],
+          'east_asia': ['Neo-Tokyo Tech Core', 'Seoul Logic Foundry', 'Shanghai Quant-Energy', 'Global Feed Distribution']
+        };
+
+        const regionNames = names[regionId] || names['middle_east'];
+
+        const newGovs = resourceTypes.map((type, idx) => ({
+          name: regionNames[idx] || `Imperial ${type.toUpperCase()}`,
           is_government: true,
           resource_type: type,
           region: regionId,
@@ -66,6 +78,9 @@ export default function CompaniesSection({ userData, resources }: CompaniesSecti
       } else {
         setGovCompanies(gov);
       }
+
+      // RADICAL FIX: Sync State Production (Passive Income for Treasury)
+      await supabase.rpc('sync_state_production', { p_region_id: regionId });
       
       setPrivateCompanies(priv);
     } catch (e) {
@@ -82,24 +97,32 @@ export default function CompaniesSection({ userData, resources }: CompaniesSecti
     }
     
     if (userData.working_at_id) {
-      alert("Registry Lock: You cannot transfer sectors without high-level clearance (Coming Soon).");
+      alert("Registry Lock: You cannot transfer sectors without high-level clearance.");
       return;
     }
 
     setActionLoading(companyId);
     try {
-      const { error } = await supabase
+      // 1. Update User Record
+      const { error: userError } = await supabase
         .from('users')
         .update({ working_at_id: companyId })
         .eq('telegram_id', userData.telegram_id);
 
-      if (error) throw error;
+      if (userError) throw userError;
       
-      // Atomic increment employees_count
-      await supabase.rpc('increment_company_employees', { p_company_id: companyId });
+      // 2. Atomic increment employees_count (Radical Verification)
+      const { data: rpcRes, error: rpcError } = await supabase.rpc('increment_company_employees', { p_company_id: companyId });
+      
+      if (rpcError) {
+        console.warn("RPC Failed, attempting direct increment legacy fallback...");
+        const target = [...govCompanies, ...privateCompanies].find(c => c.id === companyId);
+        await supabase.from('companies').update({ employees_count: (target?.employees_count || 0) + 1 }).eq('id', companyId);
+      }
 
-      alert("CONTRACT SIGNED: You are now contributing to production.");
-      window.location.reload();
+      alert("CONTRACT SIGNED: Your neural link is now registered to this production sector.");
+      fetchCompanies(); // Refresh data instead of full reload for smoother UX
+      window.location.reload(); 
     } catch (e) {
       console.error(e);
       alert("Sync Refused: Ensure your neural link is stable.");
@@ -109,16 +132,17 @@ export default function CompaniesSection({ userData, resources }: CompaniesSecti
   };
 
   const handleUpgrade = async (company: any) => {
-    // Only "President" can upgrade gov companies (Simplified to fixed telegram ID for now or admin)
-    // For now, let's allow users to try if private, or admin if gov
-    const isAdmin = userData.telegram_id === 1492586846; // Dev Mock admin
-    if (company.is_government && !isAdmin) {
-      alert("RESTRICTED: Only the High Council can authorize state infrastructure upgrades.");
+    // SECURITY CHECK: Only Admins or Owners
+    const isAdmin = userData.telegram_id === 1492586846 || userData.is_admin;
+    const isPresident = userData.is_president; // Hypothetical flag
+
+    if (company.is_government && !isAdmin && !isPresident) {
+      alert("RESTRICTED: Only the High Council or Regional President can authorize state upgrades.");
       return;
     }
 
     if (!company.is_government && company.owner_id !== userData.telegram_id) {
-       alert("SECURITY ALERT: This asset does not belong to your conglomerate.");
+       alert("SECURITY ALERT: Asset ownership mismatch.");
        return;
     }
 
@@ -277,15 +301,17 @@ export default function CompaniesSection({ userData, resources }: CompaniesSecti
                   <div className="flex flex-col items-end">
                      <div className="flex items-center gap-1">
                        <span className="text-[9px] font-mono text-zinc-500">LEVEL {company.level}</span>
-                       {/* Upgrade button for Admin/President (Simplified) */}
-                       <button 
-                         onClick={() => handleUpgrade(company)}
-                         disabled={actionLoading?.includes(company.id)}
-                         className="p-1 rounded bg-accent-cyan/10 border border-accent-cyan/20 hover:bg-accent-cyan/20 transition-all"
-                         title={`Upgrade: ${upCost.resources} Res + ${upCost.credits} Credits`}
-                       >
-                         <Hammer className="w-2.5 h-2.5 text-accent-cyan" />
-                       </button>
+                       {/* Upgrade button only for owners or admins */}
+                       {(userData.is_admin || (userData.telegram_id === 1492586846) || (!company.is_government && company.owner_id === userData.telegram_id)) && (
+                         <button 
+                           onClick={() => handleUpgrade(company)}
+                           disabled={actionLoading?.includes(company.id)}
+                           className="p-1 rounded bg-accent-cyan/10 border border-accent-cyan/20 hover:bg-accent-cyan/20 transition-all"
+                           title={`Upgrade: ${upCost.resources} Res + ${upCost.credits} Credits`}
+                         >
+                           <Hammer className="w-2.5 h-2.5 text-accent-cyan" />
+                         </button>
+                       )}
                      </div>
                      <button 
                       onClick={() => handleWork(company.id)}
