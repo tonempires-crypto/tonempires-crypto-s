@@ -132,9 +132,9 @@ export default function CompaniesSection({ userData, resources }: CompaniesSecti
   };
 
   const handleUpgrade = async (company: any) => {
-    // SECURITY CHECK: Only Admins or Owners
-    const isAdmin = userData.telegram_id === 1492586846 || userData.is_admin;
-    const isPresident = userData.is_president; // Hypothetical flag
+    // SECURITY CHECK: Only Admins or Presidents can authorize state upgrades
+    const isAdmin = userData.is_admin;
+    const isPresident = userData.is_president;
 
     if (company.is_government && !isAdmin && !isPresident) {
       alert("RESTRICTED: Only the High Council or Regional President can authorize state upgrades.");
@@ -301,8 +301,8 @@ export default function CompaniesSection({ userData, resources }: CompaniesSecti
                   <div className="flex flex-col items-end">
                      <div className="flex items-center gap-1">
                        <span className="text-[9px] font-mono text-zinc-500">LEVEL {company.level}</span>
-                       {/* Upgrade button only for owners or admins */}
-                       {(userData.is_admin || (userData.telegram_id === 1492586846) || (!company.is_government && company.owner_id === userData.telegram_id)) && (
+                       {/* Upgrade button only for owners or authorized admins */}
+                       {(userData.is_admin || (!company.is_government && company.owner_id === userData.telegram_id)) && (
                          <button 
                            onClick={() => handleUpgrade(company)}
                            disabled={actionLoading?.includes(company.id)}
