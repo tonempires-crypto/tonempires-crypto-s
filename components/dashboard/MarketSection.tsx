@@ -1,16 +1,88 @@
 'use client';
 
 import { motion } from 'motion/react';
-import { TrendingUp, TrendingDown, BarChart3, Zap, ShoppingCart } from 'lucide-react';
-
-const MARKET_DATA = [
-  { name: 'OIL', price: 1.42, change: '+12.4%', trend: 'up', volume: '1.2M' },
-  { name: 'GOLD', price: 852.10, change: '-2.1%', trend: 'down', volume: '45k' },
-  { name: 'IRON', price: 0.88, change: '+0.5%', trend: 'up', volume: '8.9M' },
-  { name: 'WHEAT', price: 0.12, change: '+5.2%', trend: 'up', volume: '150k' },
-];
+import { TrendingUp, TrendingDown, BarChart3, Zap, Loader2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabaseClient';
 
 export default function MarketSection() {
+  const [marketData, setMarketData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchMarketDynamics() {
+      try {
+        const { data: regions } = await supabase.from('regions').select('*');
+        
+        if (regions) {
+          // Total Global Reserves
+          const totalOil = regions.reduce((acc, r) => acc + (r.oil_reserve || 0), 0);
+          const totalGold = regions.reduce((acc, r) => acc + (r.gold_reserve || 0), 0);
+          const totalIron = regions.reduce((acc, r) => acc + (r.iron_reserve || 0), 0);
+          const totalWheat = regions.reduce((acc, r) => acc + (r.wheat_reserve || 0), 0);
+
+          // BASE PRICES (Realism)
+          // As supply increases, price should drop slightly, but remain valuable.
+          // Formula: Base / (1 + (Reserve / Scale))
+          const calculatePrice = (base: number, reserve: number, scale: number) => {
+            const price = base / (1 + (reserve / scale));
+            return Math.max(base * 0.1, price); // Price floor at 10% base
+          };
+
+          const dynamicData = [
+            { 
+              name: 'OIL', 
+              price: calculatePrice(2.5, totalOil, 50000).toFixed(2), 
+              change: (Math.random() * 2 - 1).toFixed(1) + '%', 
+              trend: Math.random() > 0.5 ? 'up' : 'down', 
+              volume: (totalOil * 1.5 / 1000).toFixed(1) + 'M' 
+            },
+            { 
+              name: 'GOLD', 
+              price: calculatePrice(1200, totalGold, 10000).toFixed(2), 
+              change: (Math.random() * 2 - 1).toFixed(1) + '%', 
+              trend: Math.random() > 0.7 ? 'up' : 'down', 
+              volume: (totalGold / 1000).toFixed(0) + 'k' 
+            },
+            { 
+              name: 'IRON', 
+              price: calculatePrice(1.2, totalIron, 100000).toFixed(2), 
+              change: (Math.random() * 2 - 1).toFixed(1) + '%', 
+              trend: Math.random() > 0.4 ? 'up' : 'down', 
+              volume: (totalIron * 2.1 / 1000).toFixed(1) + 'M' 
+            },
+            { 
+              name: 'WHEAT', 
+              price: calculatePrice(0.25, totalWheat, 200000).toFixed(2), 
+              change: (Math.random() * 2 - 1).toFixed(1) + '%', 
+              trend: Math.random() > 0.6 ? 'up' : 'down', 
+              volume: (totalWheat / 500).toFixed(0) + 'k' 
+            },
+          ];
+
+          setMarketData(dynamicData);
+        }
+      } catch (err) {
+        console.error("Market dynamic sync failed", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchMarketDynamics();
+    const interval = setInterval(fetchMarketDynamics, 30000); // Sync every 30s
+    return () => clearInterval(interval);
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 gap-4">
+        <Loader2 className="w-8 h-8 text-accent-cyan animate-spin" />
+        <span className="text-[10px] font-mono text-zinc-500 uppercase">Indexing Global Commodities...</span>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between mb-2">
@@ -24,7 +96,7 @@ export default function MarketSection() {
       </div>
 
       <div className="grid gap-3">
-        {MARKET_DATA.map((item, i) => (
+        {marketData.map((item, i) => (
           <motion.div
             key={item.name}
             initial={{ opacity: 0, scale: 0.95 }}
@@ -51,13 +123,14 @@ export default function MarketSection() {
         ))}
       </div>
 
-      <div className="bento-card p-4 bg-accent-orange/5 border-accent-orange/20">
-        <div className="flex items-center gap-2 text-accent-orange mb-2">
+      <div className="bento-card p-4 bg-accent-orange/5 border-accent-orange/20 text-center">
+        <div className="flex items-center justify-center gap-2 text-accent-orange mb-2">
           <Zap className="w-4 h-4" />
-          <span className="text-[10px] font-bold uppercase tracking-widest">Market Alert</span>
+          <span className="text-[10px] font-bold uppercase tracking-widest">Pricing Protocol</span>
         </div>
-        <p className="text-xs text-zinc-400 leading-relaxed">
-          The Council has announced a 15% tariff increase on Iron exports from the Middle East region. Prices expected to surge.
+        <p className="text-[10px] text-zinc-500 leading-relaxed font-mono">
+          Prices are algorithmically generated based on aggregate Global Reserves. 
+          High stockpiles decrease value; scarcity drives appreciation.
         </p>
       </div>
     </div>

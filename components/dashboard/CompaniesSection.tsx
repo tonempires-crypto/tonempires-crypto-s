@@ -91,21 +91,38 @@ export default function CompaniesSection({ userData, resources }: CompaniesSecti
         await supabase.from('companies').delete().in('id', toDelete);
       }
 
-      // Live Worker Sync
-      const { data: workerCounts } = await supabase.rpc('get_company_worker_counts');
+      // Live Worker Sync (Fallbacks to direct count if RPC missing)
+      const { data: workerCounts, error: workerError } = await supabase.rpc('get_company_worker_counts');
+      
+      let counts = workerCounts || [];
+      if (workerError || !workerCounts) {
+        console.warn("RPC Worker Count Failed, attempting aggregate query...");
+        const { data: aggregate } = await supabase
+          .from('users')
+          .select('working_at_id')
+          .not('working_at_id', 'is', null);
+        
+        const map: Record<string, number> = {};
+        aggregate?.forEach((u: any) => {
+          map[u.working_at_id] = (map[u.working_at_id] || 0) + 1;
+        });
+        counts = Object.entries(map).map(([id, count]) => ({ company_id: id, count }));
+      }
+
       const syncedGov = finalGovs.map(c => ({
         ...c,
-        employees_count: workerCounts?.find((w: any) => w.company_id === c.id)?.count || 0
+        employees_count: counts?.find((w: any) => w.company_id === c.id)?.count || 0
       }));
 
       setGovCompanies(syncedGov);
       
       // RADICAL FIX: Sync State Production (Passive Income for Treasury)
+      // This function now handles multi-user scaling
       await supabase.rpc('sync_state_production', { p_region_id: regionId });
       
       setPrivateCompanies(priv.map(c => ({
         ...c,
-        employees_count: workerCounts?.find((w: any) => w.company_id === c.id)?.count || 0
+        employees_count: counts?.find((w: any) => w.company_id === c.id)?.count || 0
       })));
     } catch (e) {
       console.error("FATAL COMPANY FETCH ERROR:", e);
