@@ -39,13 +39,28 @@ export default function CompaniesSection({ userData, resources }: CompaniesSecti
       const gov = data?.filter(c => c.is_government) || [];
       const priv = data?.filter(c => !c.is_government) || [];
 
-      console.log(`FOUND ${gov.length} GOV COMPANIES, ${priv.length} PRIVATE`);
+      // RADICAL FIX: Strict 4-Sector Enforcement
+      const resourceTypes = ['oil', 'gold', 'iron', 'wheat'];
+      const finalGovs = [];
+      const toDelete = [];
 
-      if (gov.length === 0) {
-        console.warn("NO GOVERNMENT COMPANIES FOUND. ATTEMPTING AUTO-SEED...");
-        const resourceTypes = ['oil', 'gold', 'iron', 'wheat'];
-        
-        // Better region-specific names
+      for (const type of resourceTypes) {
+        const typeGovs = gov.filter(c => c.resource_type === type);
+        if (typeGovs.length === 0) {
+          // Missing: Mark for creation
+          console.warn(`MISSING SECTOR: ${type}`);
+        } else {
+          // Keep the first one, mark others for removal (Duplicates)
+          finalGovs.push(typeGovs[0]);
+          if (typeGovs.length > 1) {
+            toDelete.push(...typeGovs.slice(1).map(c => c.id));
+          }
+        }
+      }
+
+      const missingTypes = resourceTypes.filter(type => !gov.find(c => c.resource_type === type));
+
+      if (missingTypes.length > 0) {
         const names: Record<string, string[]> = {
           'middle_east': ['ME National Petroleum', 'ME Imperial Gold', 'ME Steel Works', 'ME Ceres Grain'],
           'africa': ['Pan-African Diamond Syndicate', 'Central Gold Reserve', 'Delta Oil Consortium', 'Savannah Grain Trust'],
@@ -53,36 +68,45 @@ export default function CompaniesSection({ userData, resources }: CompaniesSecti
           'asia': ['Eastern Dragon Minerals', 'Silk Road Textiles', 'Pacific Energy Grid', 'Yangtze Wheat Fields'],
           'east_asia': ['Neo-Tokyo Tech Core', 'Seoul Logic Foundry', 'Shanghai Quant-Energy', 'Global Feed Distribution']
         };
-
         const regionNames = names[regionId] || names['middle_east'];
+        
+        const newGovs = missingTypes.map(type => {
+            const idx = resourceTypes.indexOf(type);
+            return {
+              name: regionNames[idx] || `Imperial ${type.toUpperCase()}`,
+              is_government: true,
+              resource_type: type,
+              region: regionId,
+              level: 1,
+              employees_count: 0
+            };
+        });
 
-        const newGovs = resourceTypes.map((type, idx) => ({
-          name: regionNames[idx] || `Imperial ${type.toUpperCase()}`,
-          is_government: true,
-          resource_type: type,
-          region: regionId,
-          level: 1,
-          employees_count: 0
-        }));
-
-        const { data: inserted, error: insertError } = await supabase
-          .from('companies')
-          .insert(newGovs)
-          .select();
-
-        if (insertError) {
-          console.error("SEEDING FAILED:", insertError);
-        } else {
-          setGovCompanies(inserted || []);
-        }
-      } else {
-        setGovCompanies(gov);
+        const { data: inserted } = await supabase.from('companies').insert(newGovs).select();
+        if (inserted) finalGovs.push(...inserted);
       }
 
+      if (toDelete.length > 0) {
+        console.warn("PRUNING DUPLICATE SECTORS:", toDelete);
+        await supabase.from('companies').delete().in('id', toDelete);
+      }
+
+      // Live Worker Sync
+      const { data: workerCounts } = await supabase.rpc('get_company_worker_counts');
+      const syncedGov = finalGovs.map(c => ({
+        ...c,
+        employees_count: workerCounts?.find((w: any) => w.company_id === c.id)?.count || 0
+      }));
+
+      setGovCompanies(syncedGov);
+      
       // RADICAL FIX: Sync State Production (Passive Income for Treasury)
       await supabase.rpc('sync_state_production', { p_region_id: regionId });
       
-      setPrivateCompanies(priv);
+      setPrivateCompanies(priv.map(c => ({
+        ...c,
+        employees_count: workerCounts?.find((w: any) => w.company_id === c.id)?.count || 0
+      })));
     } catch (e) {
       console.error("FATAL COMPANY FETCH ERROR:", e);
     } finally {
