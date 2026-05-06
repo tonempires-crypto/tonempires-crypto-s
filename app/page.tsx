@@ -119,6 +119,22 @@ export default function Dashboard() {
         if (data) {
           setUserData(data);
           
+          // GLOBAL PRODUCTION SYNC: Trigger hourly production for all empires and regions
+          try {
+            // 1. Reconcile all company production globally (Pulse)
+            await supabase.rpc('process_all_empire_production');
+            
+            // 2. Sync treasury distributions for regions
+            const { data: regions } = await supabase.from('regions').select('id');
+            if (regions) {
+              for (const r of regions) {
+                await supabase.rpc('sync_state_production', { p_region_id: r.id });
+              }
+            }
+          } catch (syncErr) {
+            console.error("Global sync failed:", syncErr);
+          }
+          
           // Fetch Real Private Resources from user_resources table
           const { data: resData } = await supabase
             .from('user_resources')

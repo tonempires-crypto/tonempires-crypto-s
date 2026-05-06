@@ -122,17 +122,12 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
     setLoading(true);
 
     const boost = 1 + (referralCount * 0.05);
-    const gain = 3600 * boost; // 1 hour worth of mining in one go
     const totalYield = 10 * boost; 
     const taxDeduction = totalYield * 0.20;
     const userNetYield = totalYield - taxDeduction;
 
     const newResources = {
-      oil: (resources.oil || 0) + (miningRates.oil * gain),
-      gold: (resources.gold || 0) + (miningRates.gold * gain),
-      iron: (resources.iron || 0) + (miningRates.iron * gain),
-      wheat: (resources.wheat || 0) + (miningRates.wheat * gain),
-      ton: resources.ton,
+      ...resources,
       localCurrency: (resources.localCurrency || 0) + userNetYield
     };
 
@@ -140,12 +135,13 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
       const targetRegion = userData.region || 'middle_east';
 
       // 1. Atomic RPC Claim (The most reliable method)
+      // Strictly updates currency and cooldown only
       const { error: rpcError } = await supabase.rpc('claim_mining_with_tax', {
         p_telegram_id: userData.telegram_id,
-        p_oil: Number(newResources.oil),
-        p_gold: Number(newResources.gold),
-        p_iron: Number(newResources.iron),
-        p_wheat: Number(newResources.wheat),
+        p_oil: Number(resources.oil || 0),
+        p_gold: Number(resources.gold || 0),
+        p_iron: Number(resources.iron || 0),
+        p_wheat: Number(resources.wheat || 0),
         p_net_currency: Number(newResources.localCurrency),
         p_tax_amount: Number(taxDeduction),
         p_region_id: targetRegion
@@ -163,16 +159,23 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
       const { error: userError } = await supabase
         .from('users')
         .update({
-          oil: newResources.oil,
-          gold: newResources.gold,
-          iron: newResources.iron,
-          wheat: newResources.wheat,
           local_currency_balance: newResources.localCurrency,
           last_claim: new Date().toISOString()
         })
         .eq('telegram_id', userData.telegram_id);
 
       if (userError) throw userError;
+
+      // Update User Resources Table (Ensure they stay the same)
+      await supabase
+        .from('user_resources')
+        .update({
+          oil: resources.oil,
+          gold: resources.gold,
+          iron: resources.iron,
+          wheat: resources.wheat
+        })
+        .eq('telegram_id', userData.telegram_id);
 
       // Update Regional Treasury
       const { data: regionData } = await supabase
