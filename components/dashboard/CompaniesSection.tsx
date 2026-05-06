@@ -25,23 +25,26 @@ export default function CompaniesSection({ userData, resources }: CompaniesSecti
   const fetchCompanies = async () => {
     setLoading(true);
     try {
+      console.log("FETCHING COMPANIES FOR REGION:", regionId);
       const { data, error } = await supabase
         .from('companies')
         .select('*')
         .eq('region', regionId);
 
-      if (error) throw error;
+      if (error) {
+        console.error("SUPABASE ERROR:", error);
+        throw error;
+      }
 
       const gov = data?.filter(c => c.is_government) || [];
       const priv = data?.filter(c => !c.is_government) || [];
 
-      // Auto-Seed Check: Each empire must have 4 core companies
-      const resourceTypes = ['oil', 'gold', 'iron', 'wheat'];
-      const missingTypes = resourceTypes.filter(type => !gov.find(c => c.resource_type === type));
+      console.log(`FOUND ${gov.length} GOV COMPANIES, ${priv.length} PRIVATE`);
 
-      if (missingTypes.length > 0) {
-        console.log("INITIALIZING STATE INFRASTRUCTURE FOR REGION:", regionId);
-        const newGovs = missingTypes.map(type => ({
+      if (gov.length === 0) {
+        console.warn("NO GOVERNMENT COMPANIES FOUND. ATTEMPTING AUTO-SEED...");
+        const resourceTypes = ['oil', 'gold', 'iron', 'wheat'];
+        const newGovs = resourceTypes.map(type => ({
           name: `Imperial ${type.charAt(0).toUpperCase() + type.slice(1)} Extraction`,
           is_government: true,
           resource_type: type,
@@ -55,11 +58,10 @@ export default function CompaniesSection({ userData, resources }: CompaniesSecti
           .insert(newGovs)
           .select();
 
-        if (!insertError && inserted) {
-          setGovCompanies([...gov, ...inserted]);
+        if (insertError) {
+          console.error("SEEDING FAILED:", insertError);
         } else {
-          console.error("Infrastructure Initialization Error:", insertError);
-          setGovCompanies(gov);
+          setGovCompanies(inserted || []);
         }
       } else {
         setGovCompanies(gov);
@@ -67,7 +69,7 @@ export default function CompaniesSection({ userData, resources }: CompaniesSecti
       
       setPrivateCompanies(priv);
     } catch (e) {
-      console.error(e);
+      console.error("FATAL COMPANY FETCH ERROR:", e);
     } finally {
       setLoading(false);
     }

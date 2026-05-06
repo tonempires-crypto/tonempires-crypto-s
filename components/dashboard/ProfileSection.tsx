@@ -139,15 +139,15 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
     try {
       const targetRegion = userData.region || 'middle_east';
 
-      // 1. Attempt Atomic RPC Claim (Recommended)
+      // 1. Atomic RPC Claim (The most reliable method)
       const { error: rpcError } = await supabase.rpc('claim_mining_with_tax', {
         p_telegram_id: userData.telegram_id,
-        p_oil: newResources.oil,
-        p_gold: newResources.gold,
-        p_iron: newResources.iron,
-        p_wheat: newResources.wheat,
-        p_net_currency: newResources.localCurrency,
-        p_tax_amount: taxDeduction,
+        p_oil: Number(newResources.oil),
+        p_gold: Number(newResources.gold),
+        p_iron: Number(newResources.iron),
+        p_wheat: Number(newResources.wheat),
+        p_net_currency: Number(newResources.localCurrency),
+        p_tax_amount: Number(taxDeduction),
         p_region_id: targetRegion
       });
 
@@ -195,7 +195,7 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
       onClaimSuccess(newResources);
     } catch (err) {
       console.error("Mining Sync Failure:", err);
-      alert("Mining Interrupted: Registry sync refused. Please ensure the 'claim_mining_with_tax' function is installed in Supabase.");
+      alert("Mining Interrupted: Registry sync refused. Please ensure the SQL script is run and the region is set correctly.");
     }
     setLoading(false);
   };
