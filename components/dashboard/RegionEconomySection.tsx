@@ -14,16 +14,35 @@ const REGION_META: Record<string, any> = {
 
 export default function RegionEconomySection({ regionId }: { regionId: string }) {
   const [citizenCount, setCitizenCount] = useState(0);
+  const [regionalTreasury, setRegionalTreasury] = useState({ oil: 0, gold: 0, iron: 0, wheat: 0, ton: 0 });
   const region = REGION_META[regionId] || { name: 'Unknown Sector', primary: 'General', color: 'zinc-500' };
 
   useEffect(() => {
     const fetchRegionStats = async () => {
-      const { count, error } = await supabase
+      // Fetch dynamic stats
+      const { count } = await supabase
         .from('users')
         .select('*', { count: 'exact', head: true })
         .eq('region', regionId);
       
-      if (!error) setCitizenCount(count || 0);
+      setCitizenCount(count || 0);
+
+      // Fetch Real Global Reserves (Treasury)
+      const { data: treasuryData } = await supabase
+        .from('regions')
+        .select('oil_reserve, gold_reserve, iron_reserve, wheat_reserve, tax_treasury')
+        .eq('id', regionId)
+        .single();
+      
+      if (treasuryData) {
+        setRegionalTreasury({
+          oil: treasuryData.oil_reserve || 0,
+          gold: treasuryData.gold_reserve || 0,
+          iron: treasuryData.iron_reserve || 0,
+          wheat: treasuryData.wheat_reserve || 0,
+          ton: treasuryData.tax_treasury || 0
+        });
+      }
     };
     fetchRegionStats();
   }, [regionId]);
@@ -120,11 +139,41 @@ export default function RegionEconomySection({ regionId }: { regionId: string })
         </div>
       </div>
 
+      {/* Real Strategic Reserves (The Imperial Treasury) */}
+      <div className="tech-card bg-zinc-900 border-accent-cyan/20 p-5 space-y-4">
+        <div className="flex justify-between items-center bg-black/40 p-3 rounded-xl border border-white/5">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-accent-cyan animate-pulse"></div>
+            <span className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">Imperial Strategic Reserves</span>
+          </div>
+          <span className="text-accent-orange font-mono text-[10px]">{regionalTreasury.ton.toFixed(2)} TON</span>
+        </div>
+        
+        <div className="grid grid-cols-4 gap-3">
+          <div className="text-center group">
+            <div className="text-[8px] text-zinc-600 mb-1">RESERVE OIL</div>
+            <div className="text-xs font-black text-white">{regionalTreasury.oil.toLocaleString()}</div>
+          </div>
+          <div className="text-center group">
+            <div className="text-[8px] text-zinc-600 mb-1">RESERVE GLD</div>
+            <div className="text-xs font-black text-white">{regionalTreasury.gold.toLocaleString()}</div>
+          </div>
+          <div className="text-center group">
+            <div className="text-[8px] text-zinc-600 mb-1">RESERVE IRN</div>
+            <div className="text-xs font-black text-white">{regionalTreasury.iron.toLocaleString()}</div>
+          </div>
+          <div className="text-center group">
+            <div className="text-[8px] text-zinc-600 mb-1">RESERVE WHT</div>
+            <div className="text-xs font-black text-white">{regionalTreasury.wheat.toLocaleString()}</div>
+          </div>
+        </div>
+      </div>
+
       {/* Info Notice */}
       <div className="p-4 bg-blue-500/5 border border-blue-500/20 rounded-2xl flex gap-3 italic">
         <span className="text-blue-400 text-xs text-center font-bold">!</span>
         <p className="text-[10px] text-blue-400 leading-tight">
-          Sector production remains at Zero if no Citizens are deployed. Recruit new citizens to boost your region's economic standing.
+          Sovereign production is automatically deposited into the Reserves every hour based on citizen deployment. Regional assets fund imperial defense.
         </p>
       </div>
     </div>

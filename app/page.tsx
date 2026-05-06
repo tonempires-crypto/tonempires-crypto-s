@@ -302,12 +302,12 @@ export default function Dashboard() {
               className="tech-card space-y-4 relative overflow-hidden"
             >
               <div className="absolute top-0 right-0 p-4 opacity-10">
-                <MapIcon className="w-24 h-24" />
+                <Wallet className="w-24 h-24" />
               </div>
 
               <div className="flex justify-between items-end relative z-10">
                 <div className="flex flex-col text-left">
-                  <span className="text-[10px] text-gray-500 uppercase tracking-widest font-mono mb-1">Treasury Balance</span>
+                  <span className="text-[10px] text-gray-500 uppercase tracking-widest font-mono mb-1">Personal Vault (Reserved)</span>
                   <span className="text-2xl font-black text-accent-orange tracking-tight">
                     {resources.ton.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TON
                   </span>
@@ -320,32 +320,34 @@ export default function Dashboard() {
                     <CreditCard className="w-3 h-3" />
                     DEPOSIT
                   </button>
-                  <button 
-                    onClick={triggerHaptic}
-                    className="border border-border-secondary text-white text-[10px] font-bold px-3 py-2 rounded-lg hover:bg-white/5 active:scale-90 transition-all"
-                  >
-                    OUT
-                  </button>
                 </div>
               </div>
 
-              {/* Resource Items (Stored) */}
+              {/* Resource Items (Stored in DB) */}
               <div className="grid grid-cols-4 gap-2 pt-4 border-t border-border-main">
                 <div className="text-center group">
-                  <div className="text-[9px] text-gray-600 mb-1">TOTAL OIL</div>
-                  <div className="text-xs font-mono text-zinc-300">{resources.oil.toFixed(0)}</div>
+                  <div className="text-[9px] text-gray-600 mb-1">OIL</div>
+                  <div className={`text-xs font-mono ${(resources.oil || 0) > 0 ? 'text-accent-cyan' : 'text-zinc-700'}`}>
+                    {(resources.oil || 0).toLocaleString()}
+                  </div>
                 </div>
                 <div className="text-center group">
-                  <div className="text-[9px] text-gray-600 mb-1">TOTAL GLD</div>
-                  <div className="text-xs font-mono text-zinc-300">{resources.gold.toFixed(0)}</div>
+                  <div className="text-[9px] text-gray-600 mb-1">GOLD</div>
+                  <div className={`text-xs font-mono ${(resources.gold || 0) > 0 ? 'text-accent-cyan' : 'text-zinc-700'}`}>
+                    {(resources.gold || 0).toLocaleString()}
+                  </div>
                 </div>
                 <div className="text-center group">
-                  <div className="text-[9px] text-gray-600 mb-1">TOTAL IRN</div>
-                  <div className="text-xs font-mono text-zinc-300">{resources.iron.toFixed(0)}</div>
+                  <div className="text-[9px] text-gray-600 mb-1">IRON</div>
+                  <div className={`text-xs font-mono ${(resources.iron || 0) > 0 ? 'text-accent-cyan' : 'text-zinc-700'}`}>
+                    {(resources.iron || 0).toLocaleString()}
+                  </div>
                 </div>
                 <div className="text-center group">
-                  <div className="text-[9px] text-gray-600 mb-1">TOTAL WHT</div>
-                  <div className="text-xs font-mono text-zinc-300">{resources.wheat.toFixed(0)}</div>
+                  <div className="text-[9px] text-gray-600 mb-1">WHEAT</div>
+                  <div className={`text-xs font-mono ${(resources.wheat || 0) > 0 ? 'text-accent-cyan' : 'text-zinc-700'}`}>
+                    {(resources.wheat || 0).toLocaleString()}
+                  </div>
                 </div>
               </div>
             </motion.div>
