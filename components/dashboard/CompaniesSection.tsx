@@ -127,10 +127,6 @@ export default function CompaniesSection({ userData, resources }: CompaniesSecti
 
       setGovCompanies(syncedGov);
       
-      // REAL-TIME TREASURY PASSIVE PULSE
-      const { processProductionPulse } = await import('@/lib/productionEngine');
-      await processProductionPulse(regionId);
-      
       const syncedPriv = priv.map(c => ({
         ...c,
         employees_count: counts?.find((w: any) => w.company_id === c.id)?.count || 0
@@ -154,42 +150,66 @@ export default function CompaniesSection({ userData, resources }: CompaniesSecti
     }
   };
 
-  const handleWork = async (companyId: string) => {
-    if (userData.working_at_id === companyId) {
-      alert("Neural sync active: You are already stationed here.");
+  const handleWork = async (company: any) => {
+    // 1. Check Cooldown
+    const lastWorked = userData.last_worked_at ? new Date(userData.last_worked_at).getTime() : 0;
+    const now = Date.now();
+    const cooldownMs = 6 * 60 * 60 * 1000; // 6 Hours
+    const timeLeft = lastWorked + cooldownMs - now;
+
+    if (timeLeft > 0) {
+      const hours = Math.floor(timeLeft / (1000 * 60 * 60));
+      const mins = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+      alert(`NEURAL FATIGUE: You must rest for ${hours}h ${mins}m before working again.`);
       return;
     }
+
+    // 2. Calculate Production (Hourly Rate * 6)
+    const hourlyRate = getProduction(company);
+    const totalProduction = hourlyRate * 6;
     
-    if (userData.working_at_id) {
-      alert("Registry Lock: You cannot transfer sectors without high-level clearance.");
-      return;
-    }
+    setActionLoading(company.id);
 
-    setActionLoading(companyId);
     try {
-      // 1. Update User Record
-      const { error: userError } = await supabase
-        .from('users')
-        .update({ working_at_id: companyId })
-        .eq('telegram_id', userData.telegram_id);
+      if (company.is_government) {
+        // GOV LOGIC: Direct injection of 6-hour yield to Treasury
+        const { error } = await supabase.rpc('process_citizen_work_v2', {
+          p_user_id: userData.telegram_id,
+          p_company_id: company.id,
+          p_region_id: regionId,
+          p_production_amount: totalProduction,
+          p_is_private: false
+        });
 
-      if (userError) throw userError;
-      
-      // 2. Atomic increment employees_count (Radical Verification)
-      const { data: rpcRes, error: rpcError } = await supabase.rpc('increment_company_employees', { p_company_id: companyId });
-      
-      if (rpcError) {
-        console.warn("RPC Failed, attempting direct increment legacy fallback...");
-        const target = [...govCompanies, ...privateCompanies].find(c => c.id === companyId);
-        await supabase.from('companies').update({ employees_count: (target?.employees_count || 0) + 1 }).eq('id', companyId);
+        if (error) throw error;
+        alert(`GLORY TO THE EMPIRE: ${totalProduction} ${company.resource_type.toUpperCase()} delivered to the National Treasury.`);
+      } else {
+        // PRIVATE LOGIC: Check Budget & Split 80/20
+        const salary = company.salary_rate || 0;
+        if (company.salary_budget < salary) {
+          alert("INSOLVENCY: The company owner has not allocated enough salary budget.");
+          return;
+        }
+
+        const { error } = await supabase.rpc('process_citizen_work_v2', {
+          p_user_id: userData.telegram_id,
+          p_company_id: company.id,
+          p_region_id: regionId,
+          p_production_amount: totalProduction,
+          p_is_private: true,
+          p_salary_amount: salary
+        });
+
+        if (error) throw error;
+        alert(`CONTRACT COMPLETED: You earned ${salary} Credits. ${totalProduction * 0.2} units taxed for the Empire.`);
       }
 
-      alert("CONTRACT SIGNED: Your neural link is now registered to this production sector.");
-      fetchCompanies(); // Refresh data instead of full reload for smoother UX
-      window.location.reload(); 
+      fetchCompanies(); 
+      // Force refresh user data to update local cooldown
+      window.location.reload();
     } catch (e) {
       console.error(e);
-      alert("Sync Refused: Ensure your neural link is stable.");
+      alert("SYNC ERROR: The Sovereign Node rejected your contribution.");
     } finally {
       setActionLoading(null);
     }
@@ -261,6 +281,48 @@ export default function CompaniesSection({ userData, resources }: CompaniesSecti
       console.error(e);
     } finally {
       setActionLoading(null);
+    }
+  };
+
+  const handleManageBudget = async (company: any) => {
+    const action = prompt("Type 'deposit' to add funds or 'rate' to change salary rate (Current: " + (company.salary_rate || 0) + "):");
+    if (!action) return;
+
+    if (action.toLowerCase() === 'deposit') {
+      const amount = prompt("Amount of Imperial Credits to deposit into company budget:");
+      if (!amount || isNaN(parseFloat(amount))) return;
+      
+      const numAmount = parseFloat(amount);
+      if (userData.local_currency_balance < numAmount) {
+        alert("Poverty check failed: Insufficient credits.");
+        return;
+      }
+
+      setActionLoading(`budget-${company.id}`);
+      try {
+        await supabase.from('users').update({ local_currency_balance: userData.local_currency_balance - numAmount }).eq('telegram_id', userData.telegram_id);
+        await supabase.from('companies').update({ salary_budget: (company.salary_budget || 0) + numAmount }).eq('id', company.id);
+        alert("BUDGET CAPITALIZED.");
+        fetchCompanies();
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setActionLoading(null);
+      }
+    } else if (action.toLowerCase() === 'rate') {
+      const rate = prompt("Set new salary rate per 6-hour shift:");
+      if (!rate || isNaN(parseFloat(rate))) return;
+      
+      setActionLoading(`rate-${company.id}`);
+      try {
+        await supabase.from('companies').update({ salary_rate: parseFloat(rate) }).eq('id', company.id);
+        alert("WAGE POLICY UPDATED.");
+        fetchCompanies();
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setActionLoading(null);
+      }
     }
   };
 
@@ -390,18 +452,16 @@ export default function CompaniesSection({ userData, resources }: CompaniesSecti
                          </button>
                        )}
                      </div>
-                     <button 
-                      onClick={() => handleWork(company.id)}
-                      disabled={userData.working_at_id === company.id || (userData.working_at_id && userData.working_at_id !== company.id) || actionLoading === company.id}
-                      className={`mt-2 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-tighter transition-all
-                        ${userData.working_at_id === company.id 
-                          ? 'bg-accent-cyan text-black' 
-                          : userData.working_at_id 
-                            ? 'bg-zinc-900 text-zinc-700 cursor-not-allowed opacity-50'
+                      <button 
+                        onClick={() => handleWork(company)}
+                        disabled={actionLoading === company.id}
+                        className={`mt-2 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-tighter transition-all
+                          ${userData.working_at_id === company.id 
+                            ? 'bg-accent-cyan text-black' 
                             : 'bg-zinc-800 text-white hover:bg-white/10 active:scale-95'}`}
-                     >
-                       {userData.working_at_id === company.id ? 'STATIONED' : userData.working_at_id ? 'LOCKED' : 'ENLIST'}
-                     </button>
+                      >
+                        {actionLoading === company.id ? 'PROCESSING...' : 'WORK (6H SHIFT)'}
+                      </button>
                   </div>
                 </div>
                 <div className="absolute top-0 right-0 p-4 opacity-[0.02] -rotate-12 transform scale-150">
@@ -454,16 +514,28 @@ export default function CompaniesSection({ userData, resources }: CompaniesSecti
                   </div>
                   <div className="flex flex-col items-end">
                      <span className="text-[9px] font-mono text-accent-orange">Lvl {company.level} · {company.resource_type.toUpperCase()}</span>
-                     <button 
-                      onClick={() => handleWork(company.id)}
-                      disabled={userData.working_at_id === company.id || actionLoading === company.id}
-                      className={`mt-2 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-tighter transition-all
-                        ${userData.working_at_id === company.id 
-                          ? 'bg-accent-orange text-black' 
-                          : 'bg-zinc-800 text-white hover:bg-white/10 active:scale-95'}`}
-                     >
-                       {userData.working_at_id === company.id ? 'EMPLOYED' : 'JOIN SECTOR'}
-                     </button>
+                     <div className="text-[8px] font-mono text-zinc-500 mt-1 uppercase">Budget: {Math.floor(company.salary_budget || 0)} · Salary: {company.salary_rate || 0}</div>
+                     
+                     <div className="flex gap-2 mt-2">
+                       {company.owner_id === userData.telegram_id && (
+                         <button 
+                           onClick={() => handleManageBudget(company)}
+                           className="px-2 py-1.5 rounded-lg border border-accent-orange/30 text-accent-orange text-[9px] font-bold hover:bg-accent-orange/10 transition-all"
+                         >
+                           MANAGE
+                         </button>
+                       )}
+                       <button 
+                        onClick={() => handleWork(company)}
+                        disabled={actionLoading === company.id}
+                        className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-tighter transition-all
+                          ${userData.working_at_id === company.id 
+                            ? 'bg-accent-orange text-black' 
+                            : 'bg-zinc-800 text-white hover:bg-white/10 active:scale-95'}`}
+                       >
+                         {actionLoading === company.id ? 'SYCHING...' : 'WORK (6H SHIFT)'}
+                       </button>
+                     </div>
                   </div>
                 </div>
               </div>

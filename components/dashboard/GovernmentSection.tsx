@@ -64,10 +64,10 @@ export default function GovernmentSection({ userData, resources }: GovernmentSec
 
       if (regionData) {
         setReserves({
-          oil: Math.floor(regionData.oil_treasury || regionData.oil_reserve || 0),
-          gold: Math.floor(regionData.gold_treasury || regionData.gold_reserve || 0),
-          iron: Math.floor(regionData.iron_treasury || regionData.iron_reserve || 0),
-          wheat: Math.floor(regionData.wheat_treasury || regionData.wheat_reserve || 0)
+          oil: Math.floor(regionData.oil_treasury || 0),
+          gold: Math.floor(regionData.gold_treasury || 0),
+          iron: Math.floor(regionData.iron_treasury || 0),
+          wheat: Math.floor(regionData.wheat_treasury || 0)
         });
       }
     } catch (e) {

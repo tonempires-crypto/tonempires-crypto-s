@@ -147,36 +147,6 @@ export default function Dashboard() {
             ton: data.ton_balance || 0,
             localCurrency: data.local_currency_balance || 0
           });
-
-          // GLOBAL PRODUCTION PULSE (REAL-TIME REVENUE ENGINE)
-          try {
-            const { processProductionPulse } = await import('@/lib/productionEngine');
-            
-            // 1. RECOUNT WORKERS (Safely)
-            const { data: usersAtWork } = await supabase.from('users').select('working_at_id').not('working_at_id', 'is', null);
-            const workerMap: Record<string, number> = {};
-            usersAtWork?.forEach(u => {
-              if (u.working_at_id) workerMap[u.working_at_id] = (workerMap[u.working_at_id] || 0) + 1;
-            });
-
-            const { data: currentComps } = await supabase.from('companies').select('id, employees_count');
-            if (currentComps) {
-              for (const comp of currentComps) {
-                const realCount = workerMap[comp.id] || 0;
-                // Only update if changed to avoid resetting DB triggers/timestamps
-                if (comp.employees_count !== realCount) {
-                  await supabase.from('companies').update({ employees_count: realCount }).eq('id', comp.id);
-                }
-              }
-            }
-
-            // 2. TRIGGER REAL-TIME TREASURY INJECTION
-            if (data.region) {
-              await processProductionPulse(data.region);
-            }
-          } catch (syncErr) {
-            console.error("Pulse Engine Failure:", syncErr);
-          }
           
           if (data.region && data.region !== '') {
             setShowRegionSelector(false);
