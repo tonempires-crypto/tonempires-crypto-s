@@ -21,25 +21,35 @@ export async function processProductionPulse(regionId: string) {
     if (elapsedHours < 0.01) return;
 
     // 3. Fetch Government Companies in this region
+    // RELAXED QUERY: We look for companies in the region. We'll filter for gov status in JS to avoid empty results if DB flags are inconsistent.
     const { data: companies, error: compErr } = await supabase
       .from('companies')
       .select('*')
-      .eq('region', regionId)
-      .eq('is_government', true);
+      .eq('region', regionId);
 
-    if (compErr || !companies) return;
+    if (compErr || !companies || companies.length === 0) {
+      console.warn(`No companies found for region ${regionId}. Check DB 'region' column.`);
+      return; 
+    }
 
     // 4. Calculate Production
+    // If the region still uses 'reserve' naming, we fallback, but we prefer 'treasury'
     const treasuryUpdates: Record<string, number> = {
-      oil_treasury: region.oil_treasury || 0,
-      gold_treasury: region.gold_treasury || 0,
-      iron_treasury: region.iron_treasury || 0,
-      wheat_treasury: region.wheat_treasury || 0
+      oil_treasury: region.oil_treasury || region.oil_reserve || 0,
+      gold_treasury: region.gold_treasury || region.gold_reserve || 0,
+      iron_treasury: region.iron_treasury || region.iron_reserve || 0,
+      wheat_treasury: region.wheat_treasury || region.wheat_reserve || 0
     };
 
     let hasProduction = false;
+    const govCompanies = companies.filter(c => c.is_government);
 
-    companies.forEach(company => {
+    if (govCompanies.length === 0) {
+      console.warn("No government companies detected in active region.");
+      return;
+    }
+
+    govCompanies.forEach(company => {
       const base = 50; 
       const employeeMultiplier = 1 + ((company.employees_count || 0) * 0.1);
       const levelMultiplier = 1 + ((company.level || 1) * 0.2);
@@ -64,8 +74,8 @@ export async function processProductionPulse(regionId: string) {
     });
 
     if (hasProduction) {
-      console.log(`PRODUCTION PULSE: Adding resources to ${regionId} treasury. Elapsed: ${elapsedHours.toFixed(4)}h`);
-      await supabase
+      console.log(`PRODUCTION PULSE: Injecting assets into ${regionId}. Hours: ${elapsedHours.toFixed(4)}`);
+      const { error: updateErr } = await supabase
         .from('regions')
         .update({
           ...treasuryUpdates,
@@ -73,13 +83,10 @@ export async function processProductionPulse(regionId: string) {
           updated_at: now.toISOString() 
         })
         .eq('id', regionId);
-    } else {
-      // Even if no production (e.g. 0 employees), update the pulse to avoid continuous checks
-      await supabase
-        .from('regions')
-        .update({ production_sync: now.toISOString() })
-        .eq('id', regionId);
-    }
+      
+      if (updateErr) console.error("Treasury Write Denied:", updateErr);
+    } 
+    // CRITICAL: Removed the 'else' block that was resetting the clock to zero!
 
   } catch (err) {
     console.error("PRODUCTION PULSE FATAL FAILURE:", err);
