@@ -202,14 +202,27 @@ export default function CompaniesSection({ userData, resources }: CompaniesSecti
 
     setActionLoading(`upgrade-${company.id}`);
     try {
-      // 1. Deduct resources
-      await supabase
+      // 1. Deduct currency from users and resources from user_resources
+      const { error: currencyErr } = await supabase
         .from('users')
         .update({
-          oil: resources.oil - upgradeCost,
           local_currency_balance: resources.localCurrency - currencyCost
         })
         .eq('telegram_id', userData.telegram_id);
+      
+      if (currencyErr) throw currencyErr;
+
+      const { error: resErr } = await supabase
+        .from('user_resources')
+        .update({
+          oil: resources.oil - (company.resource_type === 'oil' ? upgradeCost : 0),
+          gold: resources.gold - (company.resource_type === 'gold' ? upgradeCost : 0),
+          iron: resources.iron - (company.resource_type === 'iron' ? upgradeCost : 0),
+          wheat: resources.wheat - (company.resource_type === 'wheat' ? upgradeCost : 0)
+        })
+        .eq('telegram_id', userData.telegram_id);
+      
+      if (resErr) throw resErr;
 
       // 2. Increment level
       const { error } = await supabase

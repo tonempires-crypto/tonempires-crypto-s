@@ -39,10 +39,10 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
 
     setPromoting(true);
     try {
-      const { error } = await supabase
-        .from('users')
+      // 1. Deduct resources from user_resources table
+      const { error: resError } = await supabase
+        .from('user_resources')
         .update({
-          job_level: nextRank.level,
           oil: resources.oil - req,
           gold: resources.gold - req,
           iron: resources.iron - req,
@@ -50,7 +50,16 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
         })
         .eq('telegram_id', userData.telegram_id);
 
-      if (error) throw error;
+      if (resError) throw resError;
+
+      // 2. Update rank in users table
+      const { error: userError } = await supabase
+        .from('users')
+        .update({ job_level: nextRank.level })
+        .eq('telegram_id', userData.telegram_id);
+
+      if (userError) throw userError;
+      
       alert(`PROMOTED TO ${nextRank.title.toUpperCase()}! Your influence grows.`);
       window.location.reload(); // Refresh to update all stats
     } catch (e) {
@@ -135,64 +144,41 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
       const targetRegion = userData.region || 'middle_east';
 
       // 1. Atomic RPC Claim (The most reliable method)
-      // Strictly updates currency and cooldown only
+      // Only updates currency and cooldown; the DB already knows the current resource balances.
       const { error: rpcError } = await supabase.rpc('claim_mining_with_tax', {
         p_telegram_id: userData.telegram_id,
-        p_oil: Number(resources.oil || 0),
-        p_gold: Number(resources.gold || 0),
-        p_iron: Number(resources.iron || 0),
-        p_wheat: Number(resources.wheat || 0),
         p_net_currency: Number(newResources.localCurrency),
         p_tax_amount: Number(taxDeduction),
         p_region_id: targetRegion
       });
 
-      if (!rpcError) {
-        onClaimSuccess(newResources);
-        setLoading(false);
-        return;
-      }
+      if (rpcError) {
+        console.warn("RPC Claim failed or parameters mismatched:", rpcError);
+        
+        // Strict Fallback: Update only currency and cooldown, DO NOT overwrite resources
+        const { error: userError } = await supabase
+          .from('users')
+          .update({
+            local_currency_balance: newResources.localCurrency,
+            last_claim: new Date().toISOString()
+          })
+          .eq('telegram_id', userData.telegram_id);
 
-      console.warn("RPC Claim failed, falling back to sequential update:", rpcError);
+        if (userError) throw userError;
 
-      // 2. FALLBACK: Sequential Update (If RPC not yet created in Supabase)
-      const { error: userError } = await supabase
-        .from('users')
-        .update({
-          local_currency_balance: newResources.localCurrency,
-          last_claim: new Date().toISOString()
-        })
-        .eq('telegram_id', userData.telegram_id);
-
-      if (userError) throw userError;
-
-      // Update User Resources Table (Ensure they stay the same)
-      await supabase
-        .from('user_resources')
-        .update({
-          oil: resources.oil,
-          gold: resources.gold,
-          iron: resources.iron,
-          wheat: resources.wheat
-        })
-        .eq('telegram_id', userData.telegram_id);
-
-      // Update Regional Treasury
-      const { data: regionData } = await supabase
-        .from('regions')
-        .select('tax_treasury')
-        .eq('id', targetRegion)
-        .single();
-      
-      const currentTax = Number(regionData?.tax_treasury || 0);
-      
-      const { error: treasuryError } = await supabase
-        .from('regions')
-        .update({ tax_treasury: currentTax + taxDeduction })
-        .eq('id', targetRegion);
-
-      if (treasuryError) {
-        console.error("Treasury Transmission Error:", treasuryError);
+        // Update Regional Treasury
+        const { data: regionData } = await supabase
+          .from('regions')
+          .select('tax_treasury')
+          .eq('id', targetRegion)
+          .single();
+        
+        const currentTax = Number(regionData?.tax_treasury || 0);
+        
+        await supabase
+          .from('regions')
+          .update({ tax_treasury: currentTax + taxDeduction })
+          .eq('id', targetRegion);
       }
 
       onClaimSuccess(newResources);

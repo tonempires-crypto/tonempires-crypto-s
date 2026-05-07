@@ -116,31 +116,28 @@ export default function Dashboard() {
 
         const data = users?.[0];
 
-        if (data) {
+          if (data) {
           setUserData(data);
           
-          // GLOBAL PRODUCTION SYNC: Trigger hourly production for all empires and regions
-          try {
-            // 1. Reconcile all company production globally (Pulse)
-            await supabase.rpc('process_all_empire_production');
-            
-            // 2. Sync treasury distributions for regions
-            const { data: regions } = await supabase.from('regions').select('id');
-            if (regions) {
-              for (const r of regions) {
-                await supabase.rpc('sync_state_production', { p_region_id: r.id });
-              }
-            }
-          } catch (syncErr) {
-            console.error("Global sync failed:", syncErr);
-          }
-          
           // Fetch Real Private Resources from user_resources table
-          const { data: resData } = await supabase
+          let { data: resData, error: resError } = await supabase
             .from('user_resources')
             .select('*')
             .eq('telegram_id', user.id)
             .maybeSingle();
+
+          // AUTO-INITIALIZE: If user_resources is missing, create it to prevent the "Zero" bug
+          if (!resData && !resError) {
+             const { data: createdRes } = await supabase
+               .from('user_resources')
+               .insert({ 
+                 telegram_id: user.id,
+                 oil: 0, gold: 0, iron: 0, wheat: 0 
+               })
+               .select()
+               .maybeSingle();
+             resData = createdRes;
+          }
 
           setResources({
             oil: resData?.oil || 0,
@@ -150,6 +147,19 @@ export default function Dashboard() {
             ton: data.ton_balance || 0,
             localCurrency: data.local_currency_balance || 0
           });
+
+          // GLOBAL PRODUCTION PULSE: Trigger once to update registries
+          try {
+            await supabase.rpc('process_all_empire_production');
+            const { data: regions } = await supabase.from('regions').select('id');
+            if (regions) {
+              for (const r of regions) {
+                await supabase.rpc('sync_state_production', { p_region_id: r.id });
+              }
+            }
+          } catch (syncErr) {
+            console.error("Pulse Sync Failure:", syncErr);
+          }
           
           if (data.region && data.region !== '') {
             setShowRegionSelector(false);
@@ -376,10 +386,10 @@ export default function Dashboard() {
               </div>
             </motion.div>
 
-            {/* Hint Notice */}
+            {/* Strategic Hint */}
             <div className="p-3 bg-accent-cyan/5 border border-accent-cyan/20 rounded-xl">
               <p className="text-[10px] text-accent-cyan italic text-center">
-                Visit your Profile to mine your hourly regional resources.
+                Citizens stationed in Companies produce resources for the { (userData?.region || 'Empire').replace('_', ' ').toUpperCase() } Treasury.
               </p>
             </div>
 
