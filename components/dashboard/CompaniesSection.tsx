@@ -369,8 +369,11 @@ export default function CompaniesSection({ userData, resources }: CompaniesSecti
   };
 
   const getProduction = (company: any) => {
-    const base = 50; 
-    const employeeMultiplier = 1 + (company.employees_count * 0.1);
+    // Base production varies slightly by resource to meet user expectation (e.g. Wheat ~60)
+    let base = 50; 
+    if (company.resource_type === 'wheat') base = 40; // 40 base * 1.5 regional = 60
+    if (company.resource_type === 'oil') base = 60;
+
     const levelMultiplier = 1 + (company.level * 0.2);
     
     // Regional Synergy Bonuses
@@ -381,7 +384,8 @@ export default function CompaniesSection({ userData, resources }: CompaniesSecti
     if (company.region === 'asia' && company.resource_type === 'wheat') regionalBonus = 1.5;
     if (company.region === 'east_asia') regionalBonus = 1.15; // Tech bonus applied to all
 
-    return Math.floor(base * employeeMultiplier * levelMultiplier * regionalBonus);
+    // REMOVED employeeMultiplier: Production is now fixed per shift regardless of worker count
+    return Math.floor(base * levelMultiplier * regionalBonus);
   };
 
   const getUpgradeCost = (level: number) => {
