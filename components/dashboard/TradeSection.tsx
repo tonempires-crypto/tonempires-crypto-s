@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { ArrowLeftRight, ShieldCheck, Box, RefreshCcw, Landmark, Coins } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
+import { getGlobalMarketPrices } from '@/lib/marketUtils';
 
 interface TradeSectionProps {
   userData: any;
@@ -13,35 +14,34 @@ interface TradeSectionProps {
 
 export default function TradeSection({ userData, resources, onTradeSuccess }: TradeSectionProps) {
   const [activeTab, setActiveTab] = useState<'swap'|'p2p'>('swap');
-  const [swapDirection, setSwapDirection] = useState<'res_to_ton' | 'ton_to_local' | 'local_to_ton'>('res_to_ton');
+  const [swapDirection, setSwapDirection] = useState<'ton_to_local' | 'local_to_ton'>('ton_to_local');
   const [selectedRes, setSelectedRes] = useState('oil');
   const [amount, setAmount] = useState('');
   const [loading, setLoading] = useState(false);
   const [marketOrders, setMarketOrders] = useState<any[]>([]);
   const [regionStats, setRegionStats] = useState<any>(null);
   const [sellAmount, setSellAmount] = useState('');
-  const [sellPrice, setSellPrice] = useState('');
+  const [marketPrices, setMarketPrices] = useState<any>(null);
 
   useEffect(() => {
-    async function fetchOrders() {
+    async function fetchOrdersAndPrices() {
       try {
-        const { data, error } = await supabase
-          .from('market_orders')
-          .select('*')
-          .eq('status', 'active')
-          .order('created_at', { ascending: false });
+        const [ordersRes, pricesRes] = await Promise.all([
+          supabase.from('market_orders').select('*').eq('status', 'active').order('created_at', { ascending: false }),
+          getGlobalMarketPrices()
+        ]);
         
-        if (error) throw error;
-        if (data) setMarketOrders(data);
+        if (ordersRes.error) throw ordersRes.error;
+        if (ordersRes.data) setMarketOrders(ordersRes.data);
+        if (pricesRes) setMarketPrices(pricesRes);
       } catch (e) {
         console.error("Market fetch error:", e);
       }
     }
     
     if (activeTab === 'p2p') {
-      fetchOrders();
-      // Polling for updates
-      const interval = setInterval(fetchOrders, 10000);
+      fetchOrdersAndPrices();
+      const interval = setInterval(fetchOrdersAndPrices, 10000);
       return () => clearInterval(interval);
     }
   }, [activeTab]);
@@ -82,25 +82,7 @@ export default function TradeSection({ userData, resources, onTradeSuccess }: Tr
     
     setLoading(true);
     try {
-      if (swapDirection === 'res_to_ton') {
-        if (resources[selectedRes] < numAmount) throw new Error("Insufficient Resources");
-        const exchangeRate = 0.0014;
-        const yieldTon = numAmount * exchangeRate;
-        
-        const { error: uErr } = await supabase.from('users').update({
-          ton_balance: resources.ton + yieldTon
-        }).eq('telegram_id', userData.telegram_id);
-        if (uErr) throw uErr;
-
-        const { error: rErr } = await supabase.from('user_resources').update({ 
-          [selectedRes]: resources[selectedRes] - numAmount 
-        }).eq('telegram_id', userData.telegram_id);
-        if (rErr) throw rErr;
-        
-        onTradeSuccess({ ...resources, [selectedRes]: resources[selectedRes] - numAmount, ton: resources.ton + yieldTon });
-        alert(`TRADE SUCCESS: Received ${yieldTon.toFixed(4)} TON`);
-      } 
-      else if (swapDirection === 'ton_to_local') {
+      if (swapDirection === 'ton_to_local') {
         if (numAmount < 1) throw new Error("Minimum swap is 1 TON");
         if (resources.ton < numAmount) throw new Error("Insufficient TON in vault");
 
@@ -152,9 +134,16 @@ export default function TradeSection({ userData, resources, onTradeSuccess }: Tr
   };
 
   const handleCreateOrder = async () => {
-    if (!sellAmount || !sellPrice || loading) return;
+    if (!sellAmount || loading) return;
     const numAmount = parseFloat(sellAmount);
-    const numPrice = parseFloat(sellPrice);
+    
+    const currentPrice = marketPrices?.[selectedRes] || 0;
+    if (currentPrice <= 0) {
+      alert("MARKET OFFLINE: Local price data unavailable.");
+      return;
+    }
+
+    const totalPrice = numAmount * currentPrice;
 
     if (resources[selectedRes] < numAmount) {
       alert("IMPERIAL AUDIT: Insufficient resources to back this contract.");
@@ -174,7 +163,7 @@ export default function TradeSection({ userData, resources, onTradeSuccess }: Tr
         seller_region: userData.region,
         resource_type: selectedRes,
         amount: numAmount,
-        price_ton: numPrice,
+        price_ton: totalPrice,
         status: 'active'
       });
 
@@ -182,7 +171,6 @@ export default function TradeSection({ userData, resources, onTradeSuccess }: Tr
 
       alert("CONSIGNMENT LOGGED: Order is now visible across all empire relays.");
       setSellAmount('');
-      setSellPrice('');
       onTradeSuccess({ ...resources, [selectedRes]: resources[selectedRes] - numAmount });
     } catch (e: any) {
       console.error(e);
@@ -281,7 +269,6 @@ export default function TradeSection({ userData, resources, onTradeSuccess }: Tr
         <div className="tech-card space-y-6 bg-gradient-to-b from-zinc-900/50 to-transparent p-6 border-white/5">
           <div className="flex gap-2 p-1 bg-black/40 rounded-lg border border-white/5">
             {[
-              { id: 'res_to_ton', label: 'RES > TON' },
               { id: 'ton_to_local', label: 'TON > LOCAL' },
               { id: 'local_to_ton', label: 'LOCAL > TON' }
             ].map(opt => (
@@ -300,8 +287,7 @@ export default function TradeSection({ userData, resources, onTradeSuccess }: Tr
             <div className="flex justify-between items-end px-1">
               <span className="text-[10px] font-mono text-zinc-500 uppercase">Input Amount</span>
               <span className="text-[10px] font-mono text-accent-cyan uppercase">
-                Bal: {swapDirection === 'res_to_ton' ? resources[selectedRes]?.toFixed(2) : 
-                      swapDirection === 'ton_to_local' ? resources.ton?.toFixed(4) : 
+                Bal: {swapDirection === 'ton_to_local' ? resources.ton?.toFixed(4) : 
                       resources.localCurrency?.toFixed(2)}
               </span>
             </div>
@@ -313,22 +299,9 @@ export default function TradeSection({ userData, resources, onTradeSuccess }: Tr
                 placeholder="0.00"
                 className="flex-1 bg-black/40 border border-white/5 rounded-xl px-4 font-mono text-xl text-white outline-none focus:border-accent-cyan/30"
               />
-              {swapDirection === 'res_to_ton' ? (
-                <select 
-                  value={selectedRes}
-                  onChange={(e) => setSelectedRes(e.target.value)}
-                  className="w-28 bg-zinc-800 border border-white/10 rounded-xl px-2 text-[10px] font-bold uppercase text-white outline-none"
-                >
-                  <option value="oil">OIL</option>
-                  <option value="gold">GOLD</option>
-                  <option value="iron">IRON</option>
-                  <option value="wheat">WHEAT</option>
-                </select>
-              ) : (
-                <div className="w-28 bg-zinc-800 border border-white/10 rounded-xl flex items-center justify-center font-bold text-[10px] text-zinc-400 uppercase">
-                  {swapDirection === 'ton_to_local' ? 'TON' : 'LOCAL'}
-                </div>
-              )}
+              <div className="w-28 bg-zinc-800 border border-white/10 rounded-xl flex items-center justify-center font-bold text-[10px] text-zinc-400 uppercase">
+                {swapDirection === 'ton_to_local' ? 'TON' : 'LOCAL'}
+              </div>
             </div>
           </div>
 
@@ -342,21 +315,19 @@ export default function TradeSection({ userData, resources, onTradeSuccess }: Tr
             <div className="flex justify-between items-end px-1">
               <span className="text-[10px] font-mono text-zinc-500 uppercase">Estimated Recovery</span>
               <span className="text-[10px] font-mono text-accent-cyan uppercase">
-                Rate: {swapDirection === 'res_to_ton' ? '0.0014' : 
-                       swapDirection === 'ton_to_local' ? (1/getExchangeRate()).toFixed(4) + ' L/T' : 
+                Rate: {swapDirection === 'ton_to_local' ? (1/getExchangeRate()).toFixed(4) + ' L/T' : 
                        getExchangeRate().toFixed(4) + ' T/L'}
               </span>
             </div>
             <div className="flex gap-3 h-14">
               <div className="flex-1 bg-accent-cyan/5 border border-accent-cyan/20 rounded-xl flex items-center px-4 font-mono text-xl text-accent-cyan">
                 {amount ? (
-                  swapDirection === 'res_to_ton' ? (parseFloat(amount) * 0.0014).toFixed(4) :
                   swapDirection === 'ton_to_local' ? (parseFloat(amount) / getExchangeRate()).toFixed(2) :
                   (parseFloat(amount) * getExchangeRate()).toFixed(4)
                 ) : '0.0000'}
               </div>
               <div className="w-28 bg-zinc-800 border border-white/10 rounded-xl flex items-center justify-center gap-2 text-[10px] font-black uppercase text-accent-orange">
-                {swapDirection === 'res_to_ton' ? 'TON' : swapDirection === 'ton_to_local' ? 'LOCAL' : 'TON'}
+                {swapDirection === 'ton_to_local' ? 'LOCAL' : 'TON'}
               </div>
             </div>
           </div>
@@ -402,23 +373,24 @@ export default function TradeSection({ userData, resources, onTradeSuccess }: Tr
               </div>
             </div>
 
-            <div className="space-y-2">
-              <div className="flex justify-between items-end px-1">
-                <span className="text-[9px] font-mono text-zinc-500 uppercase">Asking Price (Total TON)</span>
-                <span className="text-[8px] font-mono text-zinc-600">Rate: 0.0014 Suggested</span>
+            <div className="p-3 bg-black/20 rounded-lg border border-white/5">
+              <div className="flex justify-between items-center">
+                <span className="text-[9px] font-mono text-zinc-500 uppercase">Current Market Value</span>
+                <span className="text-[10px] font-mono text-accent-cyan font-bold">
+                  {((marketPrices?.[selectedRes] || 0) * 100000).toFixed(4)} TON / 100k
+                </span>
               </div>
-              <input 
-                type="number"
-                value={sellPrice}
-                onChange={(e) => setSellPrice(e.target.value)}
-                placeholder="0.00 TON"
-                className="w-full bg-black/40 border border-white/5 rounded-lg h-10 px-3 font-mono text-xs text-accent-cyan outline-none"
-              />
+              <div className="flex justify-between items-center mt-2 pt-2 border-t border-white/5">
+                <span className="text-[9px] font-mono text-zinc-400 uppercase">Estimated Yield</span>
+                <span className="text-[12px] font-mono text-white font-black">
+                  {(parseFloat(sellAmount || '0') * (marketPrices?.[selectedRes] || 0)).toFixed(4)} TON
+                </span>
+              </div>
             </div>
 
             <button 
               onClick={handleCreateOrder}
-              disabled={loading || !sellAmount || !sellPrice}
+              disabled={loading || !sellAmount}
               className="w-full py-3 bg-zinc-800 hover:bg-white/5 text-white border border-white/10 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all"
             >
               Post to Global Exchange

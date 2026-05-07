@@ -3,7 +3,7 @@
 import { motion } from 'motion/react';
 import { TrendingUp, TrendingDown, BarChart3, Zap, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { getGlobalMarketPrices, PRICE_LOT_SIZE } from '@/lib/marketUtils';
 
 export default function MarketSection() {
   const [marketData, setMarketData] = useState<any[]>([]);
@@ -12,51 +12,37 @@ export default function MarketSection() {
   useEffect(() => {
     async function fetchMarketDynamics() {
       try {
-        const { data: regions } = await supabase.from('regions').select('*');
+        const prices = await getGlobalMarketPrices();
         
-        if (regions) {
-          // Total Global Reserves
-          const totalOil = regions.reduce((acc, r) => acc + (r.oil_reserve || 0), 0);
-          const totalGold = regions.reduce((acc, r) => acc + (r.gold_reserve || 0), 0);
-          const totalIron = regions.reduce((acc, r) => acc + (r.iron_reserve || 0), 0);
-          const totalWheat = regions.reduce((acc, r) => acc + (r.wheat_reserve || 0), 0);
-
-          // BASE PRICES (Realism)
-          // As supply increases, price should drop slightly, but remain valuable.
-          // Formula: Base / (1 + (Reserve / Scale))
-          const calculatePrice = (base: number, reserve: number, scale: number) => {
-            const price = base / (1 + (reserve / scale));
-            return Math.max(base * 0.1, price); // Price floor at 10% base
-          };
-
+        if (prices) {
           const dynamicData = [
             { 
               name: 'OIL', 
-              price: calculatePrice(2.5, totalOil, 50000).toFixed(2), 
+              price: (prices.oil * PRICE_LOT_SIZE).toFixed(2), 
               change: (Math.random() * 2 - 1).toFixed(1) + '%', 
               trend: Math.random() > 0.5 ? 'up' : 'down', 
-              volume: (totalOil * 1.5 / 1000).toFixed(1) + 'M' 
+              volume: (Math.random() * 5 + 1).toFixed(1) + 'M' 
             },
             { 
               name: 'GOLD', 
-              price: calculatePrice(1200, totalGold, 10000).toFixed(2), 
+              price: (prices.gold * PRICE_LOT_SIZE).toFixed(2), 
               change: (Math.random() * 2 - 1).toFixed(1) + '%', 
               trend: Math.random() > 0.7 ? 'up' : 'down', 
-              volume: (totalGold / 1000).toFixed(0) + 'k' 
+              volume: (Math.random() * 10 + 5).toFixed(0) + 'k' 
             },
             { 
               name: 'IRON', 
-              price: calculatePrice(1.2, totalIron, 100000).toFixed(2), 
+              price: (prices.iron * PRICE_LOT_SIZE).toFixed(2), 
               change: (Math.random() * 2 - 1).toFixed(1) + '%', 
               trend: Math.random() > 0.4 ? 'up' : 'down', 
-              volume: (totalIron * 2.1 / 1000).toFixed(1) + 'M' 
+              volume: (Math.random() * 3 + 1).toFixed(1) + 'M' 
             },
             { 
               name: 'WHEAT', 
-              price: calculatePrice(0.25, totalWheat, 200000).toFixed(2), 
+              price: (prices.wheat * PRICE_LOT_SIZE).toFixed(2), 
               change: (Math.random() * 2 - 1).toFixed(1) + '%', 
               trend: Math.random() > 0.6 ? 'up' : 'down', 
-              volume: (totalWheat / 500).toFixed(0) + 'k' 
+              volume: (Math.random() * 100 + 50).toFixed(0) + 'k' 
             },
           ];
 
@@ -114,6 +100,7 @@ export default function MarketSection() {
             
             <div className="text-right">
               <div className="text-lg font-mono font-bold">{item.price} <span className="text-[10px] text-zinc-500">TON</span></div>
+              <div className="text-[8px] font-mono text-zinc-600 uppercase tracking-tighter">/ 100K UNITS</div>
               <div className={`text-xs font-mono flex items-center justify-end gap-1 ${item.trend === 'up' ? 'text-emerald-500' : 'text-red-500'}`}>
                 {item.trend === 'up' ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
                 {item.change}
