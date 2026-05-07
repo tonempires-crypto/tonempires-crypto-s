@@ -114,16 +114,32 @@ export default function CompaniesSection({ userData, resources }: CompaniesSecti
         employees_count: counts?.find((w: any) => w.company_id === c.id)?.count || 0
       }));
 
+      // HARD SYNC: Write the counts back to the database to ensure production scripts see them
+      for (const c of syncedGov) {
+        await supabase
+          .from('companies')
+          .update({ employees_count: c.employees_count })
+          .eq('id', c.id);
+      }
+
       setGovCompanies(syncedGov);
       
       // RADICAL FIX: Sync State Production (Passive Income for Treasury)
-      // This function now handles multi-user scaling
       await supabase.rpc('sync_state_production', { p_region_id: regionId });
       
-      setPrivateCompanies(priv.map(c => ({
+      const syncedPriv = priv.map(c => ({
         ...c,
         employees_count: counts?.find((w: any) => w.company_id === c.id)?.count || 0
-      })));
+      }));
+
+      for (const c of syncedPriv) {
+        await supabase
+          .from('companies')
+          .update({ employees_count: c.employees_count })
+          .eq('id', c.id);
+      }
+
+      setPrivateCompanies(syncedPriv);
     } catch (e) {
       console.error("FATAL COMPANY FETCH ERROR:", e);
     } finally {

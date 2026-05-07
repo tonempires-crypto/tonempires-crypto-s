@@ -150,6 +150,23 @@ export default function Dashboard() {
 
           // GLOBAL PRODUCTION PULSE: Trigger once to update registries
           try {
+            // 1. RECOUNT WORKERS: Fix the "Zero employees" bug globally
+            const { data: usersAtWork } = await supabase.from('users').select('working_at_id').not('working_at_id', 'is', null);
+            const workerMap: Record<string, number> = {};
+            usersAtWork?.forEach(u => {
+              if (u.working_at_id) workerMap[u.working_at_id] = (workerMap[u.working_at_id] || 0) + 1;
+            });
+
+            // Update all companies with real counts
+            const { data: allComps } = await supabase.from('companies').select('id');
+            if (allComps) {
+              for (const comp of allComps) {
+                const realCount = workerMap[comp.id] || 0;
+                await supabase.from('companies').update({ employees_count: realCount }).eq('id', comp.id);
+              }
+            }
+
+            // 2. TRIGGER PRODUCTION: Now that workers are synced, run the math
             await supabase.rpc('process_all_empire_production');
             const { data: regions } = await supabase.from('regions').select('id');
             if (regions) {
