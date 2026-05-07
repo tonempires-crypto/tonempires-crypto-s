@@ -148,34 +148,34 @@ export default function Dashboard() {
             localCurrency: data.local_currency_balance || 0
           });
 
-          // GLOBAL PRODUCTION PULSE: Trigger once to update registries
+          // GLOBAL PRODUCTION PULSE (REAL-TIME REVENUE ENGINE)
           try {
-            // 1. RECOUNT WORKERS: Fix the "Zero employees" bug globally
+            const { processProductionPulse } = await import('@/lib/productionEngine');
+            
+            // 1. RECOUNT WORKERS (Safely)
             const { data: usersAtWork } = await supabase.from('users').select('working_at_id').not('working_at_id', 'is', null);
             const workerMap: Record<string, number> = {};
             usersAtWork?.forEach(u => {
               if (u.working_at_id) workerMap[u.working_at_id] = (workerMap[u.working_at_id] || 0) + 1;
             });
 
-            // Update all companies with real counts
-            const { data: allComps } = await supabase.from('companies').select('id');
-            if (allComps) {
-              for (const comp of allComps) {
+            const { data: currentComps } = await supabase.from('companies').select('id, employees_count');
+            if (currentComps) {
+              for (const comp of currentComps) {
                 const realCount = workerMap[comp.id] || 0;
-                await supabase.from('companies').update({ employees_count: realCount }).eq('id', comp.id);
+                // Only update if changed to avoid resetting DB triggers/timestamps
+                if (comp.employees_count !== realCount) {
+                  await supabase.from('companies').update({ employees_count: realCount }).eq('id', comp.id);
+                }
               }
             }
 
-            // 2. TRIGGER PRODUCTION: Now that workers are synced, run the math
-            await supabase.rpc('process_all_empire_production');
-            const { data: regions } = await supabase.from('regions').select('id');
-            if (regions) {
-              for (const r of regions) {
-                await supabase.rpc('sync_state_production', { p_region_id: r.id });
-              }
+            // 2. TRIGGER REAL-TIME TREASURY INJECTION
+            if (data.region) {
+              await processProductionPulse(data.region);
             }
           } catch (syncErr) {
-            console.error("Pulse Sync Failure:", syncErr);
+            console.error("Pulse Engine Failure:", syncErr);
           }
           
           if (data.region && data.region !== '') {

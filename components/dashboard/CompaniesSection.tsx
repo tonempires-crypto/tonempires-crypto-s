@@ -114,18 +114,22 @@ export default function CompaniesSection({ userData, resources }: CompaniesSecti
         employees_count: counts?.find((w: any) => w.company_id === c.id)?.count || 0
       }));
 
-      // HARD SYNC: Write the counts back to the database to ensure production scripts see them
+      // HARD SYNC: Only if changed
       for (const c of syncedGov) {
-        await supabase
-          .from('companies')
-          .update({ employees_count: c.employees_count })
-          .eq('id', c.id);
+        const existing = gov.find(g => g.id === c.id);
+        if (existing && existing.employees_count !== c.employees_count) {
+          await supabase
+            .from('companies')
+            .update({ employees_count: c.employees_count })
+            .eq('id', c.id);
+        }
       }
 
       setGovCompanies(syncedGov);
       
-      // RADICAL FIX: Sync State Production (Passive Income for Treasury)
-      await supabase.rpc('sync_state_production', { p_region_id: regionId });
+      // REAL-TIME TREASURY PASSIVE PULSE
+      const { processProductionPulse } = await import('@/lib/productionEngine');
+      await processProductionPulse(regionId);
       
       const syncedPriv = priv.map(c => ({
         ...c,
@@ -133,10 +137,13 @@ export default function CompaniesSection({ userData, resources }: CompaniesSecti
       }));
 
       for (const c of syncedPriv) {
-        await supabase
-          .from('companies')
-          .update({ employees_count: c.employees_count })
-          .eq('id', c.id);
+        const existing = priv.find(p => p.id === c.id);
+        if (existing && existing.employees_count !== c.employees_count) {
+          await supabase
+            .from('companies')
+            .update({ employees_count: c.employees_count })
+            .eq('id', c.id);
+        }
       }
 
       setPrivateCompanies(syncedPriv);
