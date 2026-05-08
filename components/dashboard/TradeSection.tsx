@@ -25,17 +25,26 @@ export default function TradeSection({ userData, resources, onTradeSuccess }: Tr
 
   useEffect(() => {
     async function fetchOrdersAndPrices() {
+      // Fetch prices first as they are critical for UI
       try {
-        const [ordersRes, pricesRes] = await Promise.all([
-          supabase.from('market_orders').select('*').eq('status', 'active').order('created_at', { ascending: false }),
-          getGlobalMarketPrices()
-        ]);
-        
-        if (ordersRes.error) throw ordersRes.error;
-        if (ordersRes.data) setMarketOrders(ordersRes.data);
+        const pricesRes = await getGlobalMarketPrices();
         if (pricesRes) setMarketPrices(pricesRes);
       } catch (e) {
-        console.error("Market fetch error:", e);
+        console.error("Price fetch error:", e);
+      }
+
+      // Fetch orders independently
+      try {
+        const { data, error } = await supabase
+          .from('market_orders')
+          .select('*')
+          .eq('status', 'active')
+          .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        if (data) setMarketOrders(data);
+      } catch (e) {
+        console.error("Market orders fetch error:", e);
       }
     }
     
