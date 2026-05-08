@@ -46,9 +46,9 @@ export default function MilitaryCampPage() {
           onClick={showNotification}
           className="absolute z-20 focus:outline-none drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]"
           style={{
-            top: '25%',
-            right: '12%',
-            width: '32%',
+            top: '55%',
+            right: '4%',
+            width: '40%',
           }}
         >
           <img 
@@ -64,9 +64,9 @@ export default function MilitaryCampPage() {
           onClick={showNotification}
           className="absolute z-30 focus:outline-none drop-shadow-[0_15px_30px_rgba(0,0,0,0.6)]"
           style={{
-            top: '52%',
-            left: '8%',
-            width: '45%',
+            top: '74%',
+            left: '0%',
+            width: '55%',
           }}
         >
           <img 
