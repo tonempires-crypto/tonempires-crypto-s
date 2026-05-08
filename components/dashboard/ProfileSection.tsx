@@ -498,16 +498,6 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
         </div>
       </section>
 
-      {/* Military Inventory */}
-      <section className="space-y-3">
-        <div className="flex items-center gap-2">
-          <Sword className="w-4 h-4 text-zinc-500" />
-          <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Weapons & Equipment</h3>
-        </div>
-        <div className="tech-card border-dashed border-zinc-800 bg-transparent py-8 text-center">
-          <p className="text-[10px] font-mono text-zinc-600 uppercase tracking-tighter">Armory Empty. Visit Trade Hub for equipment.</p>
-        </div>
-      </section>
     </div>
   );
 }
