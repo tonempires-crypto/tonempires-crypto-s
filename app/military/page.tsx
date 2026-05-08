@@ -15,6 +15,15 @@ export default function MilitaryCampPage() {
 
   return (
     <div className="relative w-full h-screen overflow-hidden bg-black flex flex-col font-sans">
+      {/* BACKGROUND IMAGE - Fixed and Custom Cover */}
+      <div 
+        className="absolute inset-0 z-0 bg-no-repeat bg-center bg-cover"
+        style={{ 
+          backgroundImage: `url('https://ik.imagekit.io/o8kv1qv3h/ChatGPT%20Image%20May%208,%202026,%2006_02_51%20PM.png')`,
+          backgroundAttachment: 'fixed'
+        }}
+      />
+
       {/* HEADER OVERLAY */}
       <div className="relative z-[100] p-4 bg-gradient-to-b from-black/80 to-transparent">
         <div className="flex items-center gap-3">
@@ -28,54 +37,44 @@ export default function MilitaryCampPage() {
         </div>
       </div>
 
-      {/* MAIN SCENE WRAPPER - Centered container that maintains aspect ratio */}
-      <div className="flex-1 flex items-center justify-center relative overflow-hidden bg-black">
-        <div className="relative w-full aspect-video max-h-full">
-          {/* BACKGROUND IMAGE - Maintaining landscape aspect ratio via object-contain */}
+      {/* BUILDINGS CONTAINER - Relative to preserve proportions */}
+      <div className="relative flex-1 w-full max-w-md mx-auto z-10">
+        
+        {/* Building 2: Back-Right Building */}
+        <motion.button
+          whileTap={{ scale: 0.95 }}
+          onClick={showNotification}
+          className="absolute z-20 focus:outline-none drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]"
+          style={{
+            top: '25%',
+            right: '12%',
+            width: '32%',
+          }}
+        >
           <img 
-            src="https://ik.imagekit.io/o8kv1qv3h/ChatGPT%20Image%20May%208,%202026,%2006_02_51%20PM.png"
-            className="w-full h-full object-contain pointer-events-none select-none"
-            alt="Military Base Background"
+            src="https://ik.imagekit.io/o8kv1qv3h/3c48cc6a-2d05-47e9-8dbb-5e4337aff2b7.png" 
+            alt="Barracks Complex" 
+            className="w-full h-auto pointer-events-none"
           />
+        </motion.button>
 
-          {/* BUILDINGS CONTAINER - These are now anchored to the background image box */}
-          
-          {/* Building 2: Back-Right Building */}
-          <motion.button
-            whileTap={{ scale: 0.95 }}
-            onClick={showNotification}
-            className="absolute z-20 focus:outline-none drop-shadow-[0_4px_8px_rgba(0,0,0,0.5)]"
-            style={{
-              top: '25%', // Back-right position on the background
-              right: '20%',
-              width: '24%',
-            }}
-          >
-            <img 
-              src="https://ik.imagekit.io/o8kv1qv3h/3c48cc6a-2d05-47e9-8dbb-5e4337aff2b7.png" 
-              alt="Barracks Complex" 
-              className="w-full h-auto pointer-events-none"
-            />
-          </motion.button>
-
-          {/* Building 1: Front-Left Building */}
-          <motion.button
-            whileTap={{ scale: 0.95 }}
-            onClick={showNotification}
-            className="absolute z-30 focus:outline-none drop-shadow-[0_8px_16px_rgba(0,0,0,0.6)]"
-            style={{
-              top: '50%', // Front-left position on the background
-              left: '12%',
-              width: '38%',
-            }}
-          >
-            <img 
-              src="https://ik.imagekit.io/o8kv1qv3h/d5f7fefd-d843-4848-9faa-c1d302beaeae.png" 
-              alt="Command Outpost" 
-              className="w-full h-auto pointer-events-none"
-            />
-          </motion.button>
-        </div>
+        {/* Building 1: Front-Left Building */}
+        <motion.button
+          whileTap={{ scale: 0.95 }}
+          onClick={showNotification}
+          className="absolute z-30 focus:outline-none drop-shadow-[0_15px_30px_rgba(0,0,0,0.6)]"
+          style={{
+            top: '52%',
+            left: '8%',
+            width: '45%',
+          }}
+        >
+          <img 
+            src="https://ik.imagekit.io/o8kv1qv3h/d5f7fefd-d843-4848-9faa-c1d302beaeae.png" 
+            alt="Command Outpost" 
+            className="w-full h-auto pointer-events-none"
+          />
+        </motion.button>
       </div>
 
       {/* COMING SOON NOTIFICATION */}
