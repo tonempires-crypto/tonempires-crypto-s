@@ -1,9 +1,10 @@
 'use client';
 
 import { TonConnectButton, useTonConnectUI } from '@tonconnect/ui-react';
-import { Wallet, Settings, TrendingUp, Map as MapIcon, ChevronRight, Zap, Loader2, CreditCard, Factory } from 'lucide-react';
+import { Wallet, Settings, TrendingUp, Map as MapIcon, ChevronRight, Zap, Loader2, CreditCard, Factory, Newspaper } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
 import RegionSelector from '@/components/dashboard/RegionSelector';
 import ReferralSection from '@/components/dashboard/ReferralSection';
@@ -292,7 +293,15 @@ export default function Dashboard() {
 
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full relative">
+      {/* News Access Link */}
+      <Link href="/news" className="absolute top-4 left-0 z-[60]">
+        <div className="bg-red-600 hover:bg-red-500 text-white text-[9px] font-black uppercase tracking-[0.1em] px-3 py-1 rounded-r shadow-[0_0_15px_rgba(220,38,38,0.4)] transition-all active:scale-95 flex items-center gap-1.5 border-y border-r border-white/10">
+          <div className="w-1 h-1 rounded-full bg-white animate-pulse" />
+          NEWS
+        </div>
+      </Link>
+
       <div className="flex-1 overflow-y-auto industrial-grid p-6 space-y-6">
         {activeTab === 'dash' ? (
           <>
