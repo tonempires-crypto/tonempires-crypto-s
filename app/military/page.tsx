@@ -10,6 +10,7 @@ export default function MilitaryCampPage() {
   const [notification, setNotification] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ level: 1, exp: 0, attack: 100, defense: 100 });
+  const [userRank, setUserRank] = useState(1);
   const [wheatBalance, setWheatBalance] = useState(0);
   const [telegramId, setTelegramId] = useState<number | null>(null);
   const [isTraining, setIsTraining] = useState(false);
@@ -17,6 +18,8 @@ export default function MilitaryCampPage() {
   const [inventory, setInventory] = useState<Record<string, number>>({});
   const [gameScore, setGameScore] = useState(0);
   const [gameActive, setGameActive] = useState(false);
+
+  const totalWeaponsOwned = Object.values(inventory).reduce((a, b) => a + b, 0);
 
   const SHOP_ITEMS = [
     { 
@@ -94,6 +97,10 @@ export default function MilitaryCampPage() {
       if (user) {
         setTelegramId(user.id);
         
+        // Fetch User Rank from users table
+        const { data: userData } = await supabase.from('users').select('rank').eq('telegram_id', user.id).maybeSingle();
+        if (userData) setUserRank(parseInt(userData.rank || '1'));
+
         // 1. Fetch Stats
         const { data: milData } = await supabase.from('military_stats').select('*').eq('telegram_id', user.id).maybeSingle();
         if (milData) setStats({ level: milData.level, exp: milData.exp, attack: milData.attack, defense: milData.defense });
@@ -120,6 +127,11 @@ export default function MilitaryCampPage() {
 
   const handlePurchase = async (item: any) => {
     if (!telegramId) return;
+
+    // Check Rank Limit (Weapon Limit = Rank Level)
+    if (totalWeaponsOwned >= userRank) {
+      return showNotification(`Arsenal Maxed! Upgrade Rank in Profile to own more than ${userRank} units.`);
+    }
 
     // Check Balance
     if (item.cost.iron && balances.iron < item.cost.iron) return showNotification("Insufficient Iron!");
@@ -347,7 +359,7 @@ export default function MilitaryCampPage() {
                 </button>
                 <div className="flex flex-col">
                   <h2 className="text-sm font-black uppercase tracking-widest text-white">Imperial Armory</h2>
-                  <span className="text-[8px] font-mono text-zinc-500">EXCHANGE RATE: 1.0 SOVEREIGN</span>
+                  <span className="text-[8px] font-mono text-zinc-500 uppercase tracking-tighter">Capacity: {totalWeaponsOwned} / {userRank} Units</span>
                 </div>
               </div>
               <div className="flex gap-4">

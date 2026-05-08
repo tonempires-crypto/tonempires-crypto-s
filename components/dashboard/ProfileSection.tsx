@@ -18,54 +18,66 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
   const [manualWallet, setManualWallet] = useState('');
   const [showManual, setShowManual] = useState(false);
 
-  // Job system logic
-  const jobRanks = [
-    { title: 'Alpha Apprentice', level: 1, req: 0 },
-    { title: 'Sector Specialist', level: 2, req: 200 },
-    { title: 'Regional Supervisor', level: 3, req: 800 },
-    { title: 'Imperial Director', level: 4, req: 2500 }
-  ];
-
-  const currentRankIndex = userData?.job_level ? userData.job_level - 1 : 0;
-  const nextRank = jobRanks[currentRankIndex + 1];
-
-  const handlePromote = async () => {
-    if (!nextRank || promoting) return;
+  // RANK DEFINITIONS (1-100)
+  const getRankData = (level: number) => {
+    // Progression cost formula: Base 200, +15% per level, capped at reasonable growth
+    const goldCost = Math.floor(200 * Math.pow(1.15, level - 1));
     
-    const req = nextRank.req;
-    if (resources.oil < req || resources.gold < req || resources.iron < req || resources.wheat < req) {
-      alert(`Promotion requires ${req} of ALL resources.`);
+    let title = "Citizen";
+    if (level >= 100) title = "Mighty Boss";
+    else if (level >= 95) title = "Grand Emperor";
+    else if (level >= 90) title = "Imperial Sovereign";
+    else if (level >= 80) title = "Supreme Regent";
+    else if (level >= 70) title = "High Commandant";
+    else if (level >= 60) title = "Sector Governor";
+    else if (level >= 50) title = "Distinguished Proconsul";
+    else if (level >= 40) title = "Capital Magistrate";
+    else if (level >= 30) title = "Regional Director";
+    else if (level >= 25) title = "Senior Executive";
+    else if (level >= 20) title = "Political Elite";
+    else if (level >= 15) title = "Ascendant Specialist";
+    else if (level >= 10) title = "Alpha Apprentice";
+    else if (level >= 5) title = "Civic Resident";
+    else if (level >= 2) title = "New Citizen";
+
+    return { title, goldCost };
+  };
+
+  const currentLevel = parseInt(userData?.rank || '1');
+  const nextRank = getRankData(currentLevel + 1);
+
+  const handleRankPromotion = async () => {
+    if (currentLevel >= 100) return;
+    if (resources.gold < nextRank.goldCost) {
+      alert(`Insufficient Gold! Need ${nextRank.goldCost.toLocaleString()} Gold for Level ${currentLevel + 1}`);
       return;
     }
 
     setPromoting(true);
     try {
-      // 1. Deduct resources from user_resources table
+      // 1. Deduct Gold
       const { error: resError } = await supabase
         .from('user_resources')
-        .update({
-          oil: resources.oil - req,
-          gold: resources.gold - req,
-          iron: resources.iron - req,
-          wheat: resources.wheat - req
-        })
+        .update({ gold: resources.gold - nextRank.goldCost })
         .eq('telegram_id', userData.telegram_id);
 
       if (resError) throw resError;
 
-      // 2. Update rank in users table
+      // 2. Update Rank (Level)
       const { error: userError } = await supabase
         .from('users')
-        .update({ job_level: nextRank.level })
+        .update({ rank: (currentLevel + 1).toString() })
         .eq('telegram_id', userData.telegram_id);
 
       if (userError) throw userError;
       
-      alert(`PROMOTED TO ${nextRank.title.toUpperCase()}! Your influence grows.`);
-      window.location.reload(); // Refresh to update all stats
+      alert(`RANK UP! You are now Level ${currentLevel + 1}: ${nextRank.title.toUpperCase()}`);
+      onClaimSuccess({ ...resources, gold: resources.gold - nextRank.goldCost });
+      // We force a localized state update or refresh if needed
+      window.location.reload(); 
     } catch (e) {
       console.error(e);
-      alert("Promotion failed. Registry link unstable.");
+      alert("Promotion failed. System link unstable.");
     } finally {
       setPromoting(false);
     }
@@ -217,14 +229,20 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
     <div className="space-y-6 pb-24">
       {/* Profile Header */}
       <div className="flex flex-col items-center gap-4 text-center">
-        <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-accent-cyan to-accent-blue border-2 border-accent-cyan/30 flex items-center justify-center text-4xl font-black text-black shadow-[0_0_30px_rgba(0,255,209,0.2)]">
-          {userData?.username?.slice(0, 2).toUpperCase() || '??'}
+        <div className="relative">
+          <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-accent-cyan to-accent-blue border-2 border-accent-cyan/30 flex items-center justify-center text-4xl font-black text-black shadow-[0_0_30px_rgba(0,255,209,0.2)]">
+            {userData?.username?.slice(0, 2).toUpperCase() || '??'}
+          </div>
+          <div className="absolute -bottom-1 -right-1 bg-accent-cyan text-black text-[9px] font-black px-2 py-0.5 rounded border border-black uppercase rotate-3">
+            LVL {currentLevel}
+          </div>
         </div>
         <div>
           <h2 className="text-2xl font-black tracking-tight">@{userData?.username || 'Citizen'}</h2>
           <div className="flex items-center justify-center gap-2 mt-1">
-            <span className="px-2 py-0.5 rounded bg-accent-cyan/10 border border-accent-cyan/20 text-[10px] font-mono text-accent-cyan uppercase tracking-widest">
-              {jobRanks[currentRankIndex]?.title || 'Alpha Apprentice'}
+            <span className="px-3 py-1 rounded bg-accent-cyan/10 border border-accent-cyan/20 text-[10px] font-black uppercase text-accent-cyan tracking-widest flex items-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-accent-cyan animate-pulse" />
+              {getRankData(currentLevel).title}
             </span>
           </div>
         </div>
@@ -247,32 +265,56 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
         </div>
       </div>
 
-      {/* Promotion Logic UI */}
-      {nextRank && (
-        <div className="tech-card border-white/10 bg-zinc-900/50 p-5">
+      {/* Rank Promotion Progress (Gold Only) */}
+      {currentLevel < 100 && (
+        <div className="tech-card border-orange-500/30 bg-orange-500/5 p-5 relative overflow-hidden">
           <div className="flex justify-between items-center mb-4">
             <div className="flex flex-col">
-              <span className="text-[10px] font-mono text-zinc-500 uppercase">Next Rank</span>
-              <span className="text-sm font-bold text-white uppercase">{nextRank.title}</span>
+              <span className="text-[10px] font-black text-orange-500 uppercase tracking-widest mb-1">Rank Advancement</span>
+              <span className="text-sm font-bold text-white uppercase italic">NEXT: {nextRank.title}</span>
             </div>
             <button 
-              onClick={handlePromote}
+              onClick={handleRankPromotion}
               disabled={promoting}
-              className="px-4 py-2 bg-accent-orange text-black rounded-lg text-[10px] font-black uppercase tracking-tighter hover:brightness-110 active:scale-95 transition-all disabled:opacity-50"
+              className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded text-[10px] font-black uppercase tracking-tighter shadow-[0_0_20px_rgba(234,88,12,0.3)] hover:shadow-[0_0_30px_rgba(234,88,12,0.5)] active:scale-95 transition-all disabled:opacity-50"
             >
               {promoting ? 'PROCESSING...' : 'REQUEST PROMOTION'}
             </button>
           </div>
-          <div className="space-y-2">
+          
+          <div className="space-y-3">
             <div className="flex justify-between text-[8px] font-mono text-zinc-500 uppercase">
-              <span>Required Resources</span>
-              <span>{nextRank.req} of each</span>
+              <span>Required: GOLD</span>
+              <span className={resources.gold >= nextRank.goldCost ? 'text-emerald-500 font-bold' : 'text-red-500 font-bold'}>
+                {resources.gold.toLocaleString()} / {nextRank.goldCost.toLocaleString()}
+              </span>
             </div>
-            <div className="grid grid-cols-4 gap-1">
-              {['oil', 'gold', 'iron', 'wheat'].map(res => (
-                <div key={res} className={`h-1 rounded-full ${resources[res] >= nextRank.req ? 'bg-accent-cyan' : 'bg-zinc-800'}`} />
-              ))}
+            <div className="h-1.5 w-full bg-zinc-900 border border-white/5 rounded-full overflow-hidden">
+              <motion.div 
+                initial={{ width: 0 }}
+                animate={{ width: `${Math.min(100, (resources.gold / nextRank.goldCost) * 100)}%` }}
+                className="h-full bg-gradient-to-r from-orange-600 to-orange-400"
+              />
             </div>
+          </div>
+
+          <div className="mt-4 pt-4 border-t border-white/5 space-y-2">
+            <div className="flex items-start gap-2">
+              <ShieldAlert className="w-3 h-3 text-orange-500 shrink-0 mt-0.5" />
+              <p className="text-[9px] text-zinc-400 font-mono italic">
+                Rank Level permits owning up to <span className="text-white font-bold">{currentLevel} Unit(s)</span> in the Arsenal.
+              </p>
+            </div>
+            {currentLevel < 20 && (
+              <p className="text-[8px] font-mono text-zinc-600 uppercase tracking-tight">
+                Level 20 unlocks Political Candidacy Eligibility.
+              </p>
+            )}
+            {currentLevel >= 20 && (
+              <p className="text-[8px] font-mono text-emerald-500 uppercase tracking-tight flex items-center gap-1">
+                <div className="w-1 h-1 rounded-full bg-emerald-500" /> Political Candidacy Verified
+              </p>
+            )}
           </div>
         </div>
       )}
