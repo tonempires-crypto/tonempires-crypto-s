@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'motion/react';
-import { Wallet, Briefcase, Shield, Home, Sword, Zap, Hourglass, ShieldAlert } from 'lucide-react';
+import { Wallet, Briefcase, Shield, Home, Sword, Zap, Hourglass, ShieldAlert, Loader2 } from 'lucide-react';
 import { TonConnectButton, useTonAddress } from '@tonconnect/ui-react';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
@@ -277,30 +277,91 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
         </div>
       )}
 
-      {/* Hourly Mining Button */}
-      <div className="tech-card border-accent-cyan/40 bg-accent-cyan/5 p-6 relative overflow-hidden">
-        <div className="absolute top-0 right-0 p-2 opacity-10">
-          <Zap className="w-16 h-16 text-accent-cyan" />
-        </div>
-        <div className="text-center space-y-4">
-          <div className="flex flex-col">
-            <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-[0.3em] mb-2">Regional Resource Mining</span>
-            <div className="text-2xl font-black text-white uppercase italic">
-              {userData?.region?.replace('_', ' ') || 'Establishing Link...'}
+      {/* Military Command Access (Moved) */}
+      <Link href="/military">
+        <motion.div 
+          whileTap={{ scale: 0.98 }}
+          className="tech-card bg-gradient-to-r from-red-900/40 to-black border-red-500/30 p-4 flex items-center justify-between group cursor-pointer shadow-[0_0_20px_rgba(220,38,38,0.1)]"
+        >
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-red-500/20 rounded-xl group-hover:bg-red-500/30 transition-colors">
+              <Sword className="w-5 h-5 text-red-500" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[10px] font-black uppercase text-red-500 tracking-widest leading-none mb-1">Strategic Command</span>
+              <span className="text-sm font-bold text-white uppercase">Go to Military Camp</span>
             </div>
           </div>
+          <div className="w-8 h-8 rounded-full border border-red-500/20 flex items-center justify-center group-hover:border-red-500/40 transition-colors">
+            <div className="w-1.5 h-1.5 rounded-full bg-red-600 group-hover:animate-ping" />
+          </div>
+        </motion.div>
+      </Link>
+
+      {/* Hourly Mining Button - Redesigned to be Circular with Honeycomb Animation */}
+      <div className="flex flex-col items-center justify-center p-6 tech-card border-zinc-800/10 bg-black/20">
+        <div className="text-center mb-6">
+          <span className="text-[10px] font-mono text-zinc-600 uppercase tracking-[0.4em] block mb-2">Extraction Core</span>
+          <div className="text-sm font-bold text-white uppercase italic tracking-widest opacity-60">
+            {userData?.region?.replace('_', ' ') || 'Syncing Region...'}
+          </div>
+        </div>
+
+        <div className="relative group">
+          {/* Honeycomb Pattern Decorative Ring */}
+          <div className="absolute inset-[-15px] border border-accent-cyan/10 rounded-full animate-[spin_20s_linear_infinite]" />
+          <div className="absolute inset-[-10px] border border-accent-cyan/20 rounded-full animate-[spin_12s_linear_infinite_reverse]" />
           
-          <button 
+          {/* Honeycomb SVG Background for animation */}
+          <div className="absolute inset-0 z-0 overflow-hidden rounded-full opacity-20 pointer-events-none group-hover:opacity-40 transition-opacity">
+            <svg viewBox="0 0 100 100" className={`w-full h-full fill-accent-cyan ${timeLeft > 0 ? 'opacity-10' : 'animate-pulse'}`}>
+              <pattern id="honeycomb" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
+                <path d="M10 0 L20 5 L20 15 L10 20 L0 15 L0 5 Z" />
+              </pattern>
+              <rect width="100" height="100" fill="url(#honeycomb)" />
+            </svg>
+          </div>
+
+          <motion.button 
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.9 }}
             onClick={handleMine}
             disabled={loading || timeLeft > 0}
-            className={`w-full py-4 rounded-xl font-black uppercase tracking-widest transition-all active:scale-95 shadow-[0_0_20px_rgba(0,255,209,0.2)]
-              ${timeLeft > 0 ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed' : 'bg-accent-cyan text-black hover:brightness-110'}`}
+            className={`relative z-10 w-40 h-40 rounded-full flex flex-col items-center justify-center p-4 transition-all duration-700 overflow-hidden border-4
+              ${timeLeft > 0 
+                ? 'bg-zinc-900 border-zinc-800 text-zinc-600 grayscale' 
+                : 'bg-black border-accent-cyan shadow-[0_0_40px_rgba(0,255,209,0.2)] text-white hover:shadow-[0_0_60px_rgba(0,255,209,0.4)]'}`}
           >
-            {loading ? 'SYNCING...' : timeLeft > 0 ? `COOLDOWN: ${formatTime(timeLeft)}` : 'MINE HOURLY YIELD'}
-          </button>
-          
-          <p className="text-[9px] font-mono text-zinc-500">
-            Yield calculated at 10 base + regional modifiers + { (referralCount * 5) }% referral boost
+            {loading ? (
+              <Loader2 className="w-8 h-8 text-accent-cyan animate-spin" />
+            ) : timeLeft > 0 ? (
+              <>
+                <Hourglass className="w-6 h-6 mb-2 opacity-50" />
+                <span className="text-[14px] font-black font-mono">{formatTime(timeLeft)}</span>
+                <span className="text-[8px] uppercase tracking-tighter opacity-50">Cooldown</span>
+              </>
+            ) : (
+              <>
+                <Zap className="w-8 h-8 text-accent-cyan mb-2 group-hover:animate-bounce" />
+                <span className="text-[12px] font-black uppercase tracking-tighter text-center">Execute<br/>Mining</span>
+              </>
+            )}
+
+            {/* Mining Animation Overlays */}
+            {timeLeft > 0 && (
+              <motion.div 
+                initial={{ height: "100%" }}
+                animate={{ height: "0%" }}
+                transition={{ duration: 3600, ease: "linear" }}
+                className="absolute bottom-0 left-0 w-full bg-accent-cyan/10 z-[-1]"
+              />
+            )}
+          </motion.button>
+        </div>
+
+        <div className="mt-8 text-center max-w-[200px]">
+          <p className="text-[9px] font-mono text-zinc-500 uppercase leading-relaxed tracking-wider">
+            Current Yield: <span className="text-white">{boostedMining.toFixed(2)} {regionalCurrency.code}/HR</span>
           </p>
         </div>
       </div>
@@ -394,27 +455,6 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
           <p className="text-[10px] font-mono text-zinc-600 uppercase tracking-tighter">No registered properties in this sector</p>
         </div>
       </section>
-
-      {/* Military Command Access */}
-      <Link href="/military">
-        <motion.div 
-          whileTap={{ scale: 0.98 }}
-          className="tech-card bg-gradient-to-r from-red-900/40 to-black border-red-500/30 p-4 flex items-center justify-between group cursor-pointer"
-        >
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-red-500/20 rounded-xl group-hover:bg-red-500/30 transition-colors">
-              <Sword className="w-5 h-5 text-red-500" />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-[10px] font-black uppercase text-red-500 tracking-widest leading-none mb-1">Strategic Command</span>
-              <span className="text-sm font-bold text-white uppercase">Go to Military Camp</span>
-            </div>
-          </div>
-          <div className="w-8 h-8 rounded-full border border-red-500/20 flex items-center justify-center group-hover:border-red-500/40 transition-colors">
-            <div className="w-1.5 h-1.5 rounded-full bg-red-600 group-hover:animate-ping" />
-          </div>
-        </motion.div>
-      </Link>
 
       {/* Military Inventory */}
       <section className="space-y-3">
