@@ -1,10 +1,11 @@
 'use client';
 
 import { motion } from 'motion/react';
-import { Wallet, Briefcase, Shield, Home, Sword, Zap, Hourglass } from 'lucide-react';
+import { Wallet, Briefcase, Shield, Home, Sword, Zap, Hourglass, ShieldAlert } from 'lucide-react';
 import { TonConnectButton, useTonAddress } from '@tonconnect/ui-react';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import Link from 'next/link';
 
 export default function ProfileSection({ userData, resources, miningRates, onClaimSuccess }: { userData: any, resources: any, miningRates: any, onClaimSuccess: (newResources: any) => void }) {
   const walletAddress = useTonAddress();
@@ -393,6 +394,27 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
           <p className="text-[10px] font-mono text-zinc-600 uppercase tracking-tighter">No registered properties in this sector</p>
         </div>
       </section>
+
+      {/* Military Command Access */}
+      <Link href="/military">
+        <motion.div 
+          whileTap={{ scale: 0.98 }}
+          className="tech-card bg-gradient-to-r from-red-900/40 to-black border-red-500/30 p-4 flex items-center justify-between group cursor-pointer"
+        >
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-red-500/20 rounded-xl group-hover:bg-red-500/30 transition-colors">
+              <Sword className="w-5 h-5 text-red-500" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[10px] font-black uppercase text-red-500 tracking-widest leading-none mb-1">Strategic Command</span>
+              <span className="text-sm font-bold text-white uppercase">Go to Military Camp</span>
+            </div>
+          </div>
+          <div className="w-8 h-8 rounded-full border border-red-500/20 flex items-center justify-center group-hover:border-red-500/40 transition-colors">
+            <div className="w-1.5 h-1.5 rounded-full bg-red-600 group-hover:animate-ping" />
+          </div>
+        </motion.div>
+      </Link>
 
       {/* Military Inventory */}
       <section className="space-y-3">
