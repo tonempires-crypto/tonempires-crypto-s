@@ -569,13 +569,15 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
 
       {/* Ranking Section */}
       <div className="mx-0 flex justify-center">
-        <motion.button 
-          disabled
-          className="w-full py-4 bg-zinc-900/50 border border-white/5 rounded-2xl flex items-center justify-center gap-3 opacity-50 cursor-not-allowed group"
-        >
-          <Trophy className="w-5 h-5 text-yellow-500/50 group-hover:text-yellow-500 transition-colors" />
-          <span className="text-xs font-black uppercase tracking-[0.2em] text-zinc-500">Imperial Ranking</span>
-        </motion.button>
+        <Link href="/ranking" className="w-full">
+          <motion.button 
+            whileTap={{ scale: 0.98 }}
+            className="w-full py-4 bg-zinc-900 border border-white/10 rounded-2xl flex items-center justify-center gap-3 group hover:bg-zinc-800 transition-all shadow-xl shadow-black/50"
+          >
+            <Trophy className="w-5 h-5 text-yellow-500 group-hover:scale-110 transition-transform" />
+            <span className="text-xs font-black uppercase tracking-[0.2em] text-white">Imperial Ranking</span>
+          </motion.button>
+        </Link>
       </div>
 
       {/* Property Section */}
