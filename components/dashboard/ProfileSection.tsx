@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'motion/react';
-import { Wallet, Briefcase, Shield, Home, Sword, Zap, Hourglass, ShieldAlert, Loader2 } from 'lucide-react';
+import { Wallet, Briefcase, Shield, Home, Sword, Zap, Hourglass, ShieldAlert, Loader2, ArrowRight } from 'lucide-react';
 import { TonConnectButton, useTonAddress } from '@tonconnect/ui-react';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
@@ -489,12 +489,22 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
 
       {/* Property Section */}
       <section className="space-y-3">
-        <div className="flex items-center gap-2">
-          <Home className="w-4 h-4 text-zinc-500" />
-          <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Real Estate Assets</h3>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Home className="w-4 h-4 text-zinc-500" />
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Real Estate Assets</h3>
+          </div>
+          <Link href="/real-estate">
+            <motion.button 
+              whileTap={{ scale: 0.95 }}
+              className="bg-white/5 hover:bg-white/10 border border-white/10 px-3 py-1 rounded text-[8px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-all flex items-center gap-1.5"
+            >
+              Enter <ArrowRight className="w-3 h-3 text-accent-cyan" />
+            </motion.button>
+          </Link>
         </div>
-        <div className="tech-card border-dashed border-zinc-800 bg-transparent py-8 text-center">
-          <p className="text-[10px] font-mono text-zinc-600 uppercase tracking-tighter">No registered properties in this sector</p>
+        <div className="tech-card border-dashed border-zinc-800 bg-transparent py-8 text-center cursor-pointer hover:bg-white/5 transition-all group" onClick={() => window.location.href = '/real-estate'}>
+          <p className="text-[10px] font-mono text-zinc-600 uppercase tracking-tighter group-hover:text-white transition-colors">No registered properties in this sector. Click Enter to explore map.</p>
         </div>
       </section>
 
