@@ -83,6 +83,24 @@ export default function MilitaryCampPage() {
   const WHEAT_PER_SESSION = 50 + (stats.level - 1) * 10;
 
   const [balances, setBalances] = useState({ iron: 0, oil: 0, ton: 0 });
+  const [vipPoints, setVipPoints] = useState(0);
+
+  // VIP Logic
+  const getVipBonus = (points: number) => {
+    if (points >= 240000) return { atk: 1.30, def: 1.20, level: 10 };
+    if (points >= 120000) return { atk: 1.20, def: 1.10, level: 9 };
+    if (points >= 64000) return { atk: 1.12, def: 1.04, level: 8 };
+    if (points >= 32000) return { atk: 1.08, def: 1.02, level: 7 };
+    if (points >= 16000) return { atk: 1.04, def: 1.01, level: 6 };
+    if (points >= 8000) return { atk: 1.03, def: 1.00, level: 5 };
+    if (points >= 4000) return { atk: 1.02, def: 1.00, level: 3 };
+    if (points >= 2000) return { atk: 1.01, def: 1.00, level: 2 };
+    return { atk: 1.00, def: 1.00, level: 0 };
+  };
+
+  const vipBonus = getVipBonus(vipPoints);
+  const totalAttack = Math.floor(stats.attack * vipBonus.atk);
+  const totalDefense = Math.floor(stats.defense * vipBonus.def);
 
   useEffect(() => {
     async function initMilitary() {
@@ -97,6 +115,16 @@ export default function MilitaryCampPage() {
       if (user) {
         setTelegramId(user.id);
         
+        // Fetch VIP Points
+        const { count } = await supabase.from('users').select('*', { count: 'exact', head: true }).eq('referred_by', user.id);
+        const { data: resData } = await supabase.from('user_resources').select('wheat, iron, oil, ton_balance, total_ton_deposited').eq('telegram_id', user.id).maybeSingle();
+        
+        if (resData) {
+          setWheatBalance(resData.wheat);
+          setBalances({ iron: resData.iron || 0, oil: resData.oil || 0, ton: resData.ton_balance || 0 });
+          setVipPoints(((count || 0) * 100) + Math.floor((resData.total_ton_deposited || 0) * 1000));
+        }
+
         // Fetch User Rank from users table
         const { data: userData } = await supabase.from('users').select('rank').eq('telegram_id', user.id).maybeSingle();
         if (userData) setUserRank(parseInt(userData.rank || '1'));
@@ -289,20 +317,26 @@ export default function MilitaryCampPage() {
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-2">
                 <div className="flex justify-between items-end">
-                  <span className="text-[9px] font-mono text-zinc-500 uppercase">Attack</span>
-                  <span className="text-xl font-black italic text-white leading-none">{stats.attack}</span>
+                  <div className="flex flex-col">
+                    <span className="text-[9px] font-mono text-zinc-500 uppercase">Attack</span>
+                    {vipBonus.atk > 1 && <span className="text-[7px] text-red-400 font-bold">VIP +{Math.round((vipBonus.atk-1)*100)}%</span>}
+                  </div>
+                  <span className="text-xl font-black italic text-white leading-none">{totalAttack}</span>
                 </div>
                 <div className="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden">
-                  <motion.div initial={{ width: 0 }} animate={{ width: `${Math.min(100, (stats.attack / 5000) * 100)}%` }} className="h-full bg-red-600 shadow-[0_0_10px_rgba(220,38,38,0.5)]" />
+                  <motion.div initial={{ width: 0 }} animate={{ width: `${Math.min(100, (totalAttack / 5000) * 100)}%` }} className="h-full bg-red-600 shadow-[0_0_10px_rgba(220,38,38,0.5)]" />
                 </div>
               </div>
               <div className="space-y-2">
                 <div className="flex justify-between items-end">
-                  <span className="text-[9px] font-mono text-zinc-500 uppercase">Defense</span>
-                  <span className="text-xl font-black italic text-white leading-none">{stats.defense}</span>
+                  <div className="flex flex-col">
+                    <span className="text-[9px] font-mono text-zinc-500 uppercase">Defense</span>
+                    {vipBonus.def > 1 && <span className="text-[7px] text-blue-400 font-bold">VIP +{Math.round((vipBonus.def-1)*100)}%</span>}
+                  </div>
+                  <span className="text-xl font-black italic text-white leading-none">{totalDefense}</span>
                 </div>
                 <div className="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden">
-                  <motion.div initial={{ width: 0 }} animate={{ width: `${Math.min(100, (stats.defense / 5000) * 100)}%` }} className="h-full bg-accent-cyan shadow-[0_0_10px_rgba(45,212,191,0.5)]" />
+                  <motion.div initial={{ width: 0 }} animate={{ width: `${Math.min(100, (totalDefense / 5000) * 100)}%` }} className="h-full bg-accent-cyan shadow-[0_0_10px_rgba(45,212,191,0.5)]" />
                 </div>
               </div>
             </div>

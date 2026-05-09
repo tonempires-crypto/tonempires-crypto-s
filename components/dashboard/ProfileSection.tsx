@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'motion/react';
-import { Wallet, Briefcase, Shield, Home, Sword, Zap, Hourglass, ShieldAlert, Loader2, ArrowRight, Car, ShoppingBag } from 'lucide-react';
+import { Wallet, Briefcase, Shield, Home, Sword, Zap, Hourglass, ShieldAlert, Loader2, ArrowRight, Car, ShoppingBag, Trophy } from 'lucide-react';
 import { TonConnectButton, useTonAddress } from '@tonconnect/ui-react';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
@@ -19,6 +19,23 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
   const [showManual, setShowManual] = useState(false);
   const [realEstate, setRealEstate] = useState({ house: false, car: false, shop: false });
   const [loadingEstate, setLoadingEstate] = useState(true);
+  const [vipPoints, setVipPoints] = useState(0);
+
+  // VIP Logic
+  const getVipData = (points: number) => {
+    if (points >= 240000) return { level: 10, border: 'border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.5)]', atk: 30, def: 20, name: 'Luxurious Gold' };
+    if (points >= 120000) return { level: 9, border: 'border-red-600 shadow-[0_0_20px_rgba(220,38,38,0.5)]', atk: 20, def: 10, name: 'Elite Red' };
+    if (points >= 64000) return { level: 8, border: 'border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.4)]', atk: 12, def: 4, name: 'Advanced Red' };
+    if (points >= 32000) return { level: 7, border: 'border-blue-600 shadow-[0_0_20px_rgba(37,99,235,0.5)]', atk: 8, def: 2, name: 'Sovereign Blue' };
+    if (points >= 16000) return { level: 6, border: 'border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.4)]', atk: 4, def: 1, name: 'Executive Blue' };
+    if (points >= 8000) return { level: 5, border: 'border-blue-400 shadow-[0_0_10px_rgba(96,165,250,0.3)]', atk: 3, def: 0, name: 'Blue Initiate' };
+    if (points >= 4000) return { level: 3, border: 'border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.4)]', atk: 2, def: 0, name: 'Noble Green' };
+    if (points >= 2000) return { level: 2, border: 'border-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.3)]', atk: 1, def: 0, name: 'Green Elite' };
+    if (points >= 1000) return { level: 1, border: 'border-emerald-400', atk: 0, def: 0, name: 'Green Member' };
+    return { level: 0, border: 'border-accent-cyan/30', atk: 0, def: 0, name: 'No VIP' };
+  };
+
+  const vip = getVipData(vipPoints);
 
   // RANK DEFINITIONS (1-100)
   const getRankData = (level: number) => {
@@ -127,6 +144,20 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
       setReferralCount(count || 0);
     };
     fetchReferrals();
+  }, [userData]);
+
+  useEffect(() => {
+    const fetchVipPoints = async () => {
+      if (!userData?.telegram_id) return;
+      // Points = 100 per referral + 1000 per TON deposited
+      const { count } = await supabase.from('users').select('*', { count: 'exact', head: true }).eq('referred_by', userData.telegram_id);
+      const { data: resData } = await supabase.from('user_resources').select('total_ton_deposited').eq('telegram_id', userData.telegram_id).maybeSingle();
+      
+      const refs = count || 0;
+      const deposits = resData?.total_ton_deposited || 0;
+      setVipPoints((refs * 100) + Math.floor(deposits * 1000));
+    };
+    fetchVipPoints();
   }, [userData]);
 
   useEffect(() => {
@@ -245,13 +276,31 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
 
   return (
     <div className="space-y-6 pb-24">
+      {/* VIP Status Bar */}
+      {vip.level > 0 && (
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }} 
+          animate={{ opacity: 1, y: 0 }}
+          className={`mx-4 p-2 rounded-lg border flex items-center justify-between bg-black/40 ${vip.border.split(' ')[0]}`}
+        >
+          <div className="flex items-center gap-2">
+             <Trophy className={`w-3 h-3 ${vip.level >= 10 ? 'text-yellow-400' : vip.level >= 8 ? 'text-red-500' : vip.level >= 5 ? 'text-blue-500' : 'text-emerald-500'}`} />
+             <span className="text-[9px] font-black uppercase tracking-widest text-white">VIP LEVEL {vip.level}: {vip.name}</span>
+          </div>
+          <div className="flex gap-2">
+            {vip.atk > 0 && <span className="text-[8px] font-mono text-red-400">ATK +{vip.atk}%</span>}
+            {vip.def > 0 && <span className="text-[8px] font-mono text-blue-400">DEF +{vip.def}%</span>}
+          </div>
+        </motion.div>
+      )}
+
       {/* Profile Header */}
       <div className="flex flex-col items-center gap-4 text-center">
         <div className="relative">
-          <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-accent-cyan to-accent-blue border-2 border-accent-cyan/30 flex items-center justify-center text-4xl font-black text-black shadow-[0_0_30px_rgba(0,255,209,0.2)]">
+          <div className={`w-24 h-24 rounded-full bg-gradient-to-tr from-accent-cyan to-accent-blue border-[3px] flex items-center justify-center text-4xl font-black text-black transition-all duration-500 ${vip.border}`}>
             {userData?.username?.slice(0, 2).toUpperCase() || '??'}
           </div>
-          <div className="absolute -bottom-1 -right-1 bg-accent-cyan text-black text-[9px] font-black px-2 py-0.5 rounded border border-black uppercase rotate-3">
+          <div className={`absolute -bottom-1 -right-1 text-black text-[9px] font-black px-2 py-0.5 rounded border border-black uppercase rotate-3 ${vip.level >= 10 ? 'bg-yellow-400' : 'bg-accent-cyan'}`}>
             LVL {currentLevel}
           </div>
         </div>
@@ -262,6 +311,11 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
               <div className="w-1.5 h-1.5 rounded-full bg-accent-cyan animate-pulse" />
               {getRankData(currentLevel).title}
             </span>
+            {vip.level > 0 && (
+              <span className="px-3 py-1 rounded bg-white/5 border border-white/10 text-[10px] font-black uppercase text-zinc-400 tracking-widest">
+                {vipPoints.toLocaleString()} PTS
+              </span>
+            )}
           </div>
         </div>
       </div>
