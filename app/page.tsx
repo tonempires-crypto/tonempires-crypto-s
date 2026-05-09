@@ -15,6 +15,7 @@ import ProfileSection from '@/components/dashboard/ProfileSection';
 import RegionEconomySection from '@/components/dashboard/RegionEconomySection';
 import GovernmentSection from '@/components/dashboard/GovernmentSection';
 import CompaniesSection from '@/components/dashboard/CompaniesSection';
+import SettingsMenu from '@/components/dashboard/SettingsMenu';
 
 export default function Dashboard() {
   const [userName, setUserName] = useState('jdoe_trading');
@@ -319,9 +320,12 @@ export default function Dashboard() {
                   <span className="text-sm font-semibold tracking-tight truncate">@{userName || 'Citizen'}</span>
                 </div>
               </button>
-              <div className="bg-[#151518] border border-border-main px-3 py-1.5 rounded-xl flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-accent-cyan animate-pulse"></div>
-                <span className="text-[10px] uppercase font-bold tracking-tighter">Live Network</span>
+              <div className="flex items-center gap-2">
+                <div className="bg-[#151518] border border-border-main px-3 py-1.5 rounded-xl flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-accent-cyan animate-pulse"></div>
+                  <span className="text-[10px] uppercase font-bold tracking-tighter">Live Network</span>
+                </div>
+                <SettingsMenu />
               </div>
             </header>
 
