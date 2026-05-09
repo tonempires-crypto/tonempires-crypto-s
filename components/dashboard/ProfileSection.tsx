@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'motion/react';
-import { Wallet, Briefcase, Shield, Home, Sword, Zap, Hourglass, ShieldAlert, Loader2, ArrowRight } from 'lucide-react';
+import { Wallet, Briefcase, Shield, Home, Sword, Zap, Hourglass, ShieldAlert, Loader2, ArrowRight, Car, ShoppingBag } from 'lucide-react';
 import { TonConnectButton, useTonAddress } from '@tonconnect/ui-react';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';

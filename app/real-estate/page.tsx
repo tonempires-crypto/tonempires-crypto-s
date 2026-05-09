@@ -195,7 +195,7 @@ export default function RealEstatePage() {
                     <div className="flex justify-between items-center p-3 bg-white/5 rounded-lg border border-white/5">
                        <span className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">Ownership Cost</span>
                        <span className="text-xs font-bold text-white uppercase">
-                          {Object.values(selectedAsset.cost)[0].toLocaleString()} {Object.keys(selectedAsset.cost)[0]}
+                          {(Object.values(selectedAsset.cost)[0] as number).toLocaleString()} {Object.keys(selectedAsset.cost)[0]}
                        </span>
                     </div>
                   )}
