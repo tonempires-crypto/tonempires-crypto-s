@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowLeft, Plus, Shield, Sword, Trophy, Crown, Zap, Loader2, User } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
 
@@ -14,6 +14,17 @@ export default function AppearancePage() {
   const [vipPoints, setVipPoints] = useState(0);
   const [selectedSkin, setSelectedSkin] = useState('man1');
   const [saving, setSaving] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.defaultMuted = true;
+      videoRef.current.muted = true;
+      videoRef.current.play().catch(error => {
+        console.warn("Video autoplay blocked by browser, waiting for interaction:", error);
+      });
+    }
+  }, [selectedSkin, loading]);
 
   const skins = [
     { id: 'man1', label: 'MALE UNIT', video: '/man1.mp4' },
@@ -85,18 +96,24 @@ export default function AppearancePage() {
     <div className="relative w-full h-screen overflow-hidden bg-black text-white font-sans">
       {/* BACKGROUND VIDEO LAYER */}
       <AnimatePresence mode="wait">
-        <motion.video
+        <motion.div
           key={selectedSkin}
-          src={currentVideo}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          autoPlay
-          loop
-          muted
-          playsInline
-          className="absolute inset-0 w-full h-full object-cover opacity-60 z-0"
-        />
+          transition={{ duration: 0.5 }}
+          className="absolute inset-0 z-0"
+        >
+          <video
+            ref={videoRef}
+            src={currentVideo}
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="w-full h-full object-cover opacity-60"
+          />
+        </motion.div>
       </AnimatePresence>
 
       {/* OVERLAY FILTERS */}
