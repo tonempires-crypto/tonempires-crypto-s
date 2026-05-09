@@ -16,8 +16,8 @@ export default function AppearancePage() {
   const [saving, setSaving] = useState(false);
 
   const skins = [
-    { id: 'man1', label: 'MALE UNIT', video: 'https://ik.imagekit.io/trya1gkkd/man1.mp4' },
-    { id: 'woman1', label: 'FEMALE UNIT', video: 'https://ik.imagekit.io/trya1gkkd/woman1.mp4' }
+    { id: 'man1', label: 'MALE UNIT', video: '/man1.mp4' },
+    { id: 'woman1', label: 'FEMALE UNIT', video: '/woman1.mp4' }
   ];
 
   useEffect(() => {
@@ -87,6 +87,7 @@ export default function AppearancePage() {
       <AnimatePresence mode="wait">
         <motion.video
           key={selectedSkin}
+          src={currentVideo}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -95,9 +96,7 @@ export default function AppearancePage() {
           muted
           playsInline
           className="absolute inset-0 w-full h-full object-cover opacity-60 z-0"
-        >
-          <source src={currentVideo} type="video/mp4" />
-        </motion.video>
+        />
       </AnimatePresence>
 
       {/* OVERLAY FILTERS */}
