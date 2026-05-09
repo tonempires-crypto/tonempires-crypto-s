@@ -17,6 +17,8 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
   // Sync wallet address to DB
   const [manualWallet, setManualWallet] = useState('');
   const [showManual, setShowManual] = useState(false);
+  const [realEstate, setRealEstate] = useState({ house: false, car: false, shop: false });
+  const [loadingEstate, setLoadingEstate] = useState(true);
 
   // RANK DEFINITIONS (1-100)
   const getRankData = (level: number) => {
@@ -127,6 +129,19 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
     fetchReferrals();
   }, [userData]);
 
+  useEffect(() => {
+    async function fetchRealEstate() {
+      if (userData?.telegram_id) {
+        const { data } = await supabase.from('user_real_estate').select('*').eq('telegram_id', userData.telegram_id).maybeSingle();
+        if (data) {
+          setRealEstate({ house: data.has_house, car: data.has_car, shop: data.has_shop });
+        }
+        setLoadingEstate(false);
+      }
+    }
+    fetchRealEstate();
+  }, [userData]);
+
   // Handle cooldown timer
   useEffect(() => {
     if (!userData?.last_claim) return;
@@ -144,7 +159,8 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
     setLoading(true);
 
     const boost = 1 + (referralCount * 0.05);
-    const totalYield = 10 * boost; 
+    const estateMultiplier = 1 + (realEstate.house ? 1 : 0) + (realEstate.car ? 1 : 0);
+    const totalYield = 10 * boost * estateMultiplier; 
     const taxDeduction = totalYield * 0.20;
     const userNetYield = totalYield - taxDeduction;
 
@@ -210,7 +226,9 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
 
   const boost = referralCount * 0.05;
   const baseRate = 10;
-  const boostedMining = baseRate * (1 + boost);
+  // Real Estate Bonus: Each (House and Car) gives +100% (total additive stacking of bonuses)
+  const estateMultiplier = 1 + (realEstate.house ? 1 : 0) + (realEstate.car ? 1 : 0);
+  const boostedMining = baseRate * (1 + boost) * estateMultiplier;
 
   const getRegionalCurrency = (region: string) => {
     switch (region) {
@@ -497,15 +515,47 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
           <Link href="/real-estate">
             <motion.button 
               whileTap={{ scale: 0.95 }}
-              className="bg-white/5 hover:bg-white/10 border border-white/10 px-3 py-1 rounded text-[8px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-all flex items-center gap-1.5"
+              className="bg-white/5 hover:bg-white/10 border border-white/10 px-3 py-1 rounded text-[8px] font-black uppercase tracking-widest text-emerald-400 hover:text-white transition-all flex items-center gap-1.5 shadow-[0_0_10px_rgba(16,185,129,0.1)]"
             >
-              Enter <ArrowRight className="w-3 h-3 text-accent-cyan" />
+              Enter Map <ArrowRight className="w-3 h-3" />
             </motion.button>
           </Link>
         </div>
-        <div className="tech-card border-dashed border-zinc-800 bg-transparent py-8 text-center cursor-pointer hover:bg-white/5 transition-all group" onClick={() => window.location.href = '/real-estate'}>
-          <p className="text-[10px] font-mono text-zinc-600 uppercase tracking-tighter group-hover:text-white transition-colors">No registered properties in this sector. Click Enter to explore map.</p>
-        </div>
+        
+        {loadingEstate ? (
+          <div className="tech-card border-dashed border-zinc-800 bg-transparent py-8 flex justify-center">
+             <Loader2 className="w-4 h-4 text-zinc-700 animate-spin" />
+          </div>
+        ) : !realEstate.house && !realEstate.car && !realEstate.shop ? (
+          <div className="tech-card border-dashed border-zinc-800 bg-transparent py-8 text-center cursor-pointer hover:bg-white/5 transition-all group" onClick={() => window.location.href = '/real-estate'}>
+            <p className="text-[10px] font-mono text-zinc-600 uppercase tracking-tighter group-hover:text-white transition-colors">No registered properties in this sector. Tap Enter to explore.</p>
+          </div>
+        ) : (
+          <div className="tech-card border-zinc-800/50 bg-black/20 p-4">
+            <div className="flex items-center justify-around gap-2">
+               <div className={`flex flex-col items-center gap-2 transition-opacity ${realEstate.house ? 'opacity-100' : 'opacity-20'}`}>
+                  <div className="p-3 bg-white/5 rounded-xl border border-white/10">
+                    <Home className="w-5 h-5 text-emerald-500" />
+                  </div>
+                  <span className="text-[8px] font-black uppercase text-white">Estate</span>
+               </div>
+               <div className="w-[1px] h-8 bg-white/5" />
+               <div className={`flex flex-col items-center gap-2 transition-opacity ${realEstate.car ? 'opacity-100' : 'opacity-20'}`}>
+                  <div className="p-3 bg-white/5 rounded-xl border border-white/10">
+                    <Car className="w-5 h-5 text-blue-500" />
+                  </div>
+                  <span className="text-[8px] font-black uppercase text-white">Transport</span>
+               </div>
+               <div className="w-[1px] h-8 bg-white/5" />
+               <div className={`flex flex-col items-center gap-2 transition-opacity ${realEstate.shop ? 'opacity-100' : 'opacity-20'}`}>
+                  <div className="p-3 bg-white/5 rounded-xl border border-white/10">
+                    <ShoppingBag className="w-5 h-5 text-orange-500" />
+                  </div>
+                  <span className="text-[8px] font-black uppercase text-white">Market</span>
+               </div>
+            </div>
+          </div>
+        )}
       </section>
 
     </div>
