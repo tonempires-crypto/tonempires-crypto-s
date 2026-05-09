@@ -133,13 +133,6 @@ export default function MilitaryCampPage() {
         const { data: milData } = await supabase.from('military_stats').select('*').eq('telegram_id', user.id).maybeSingle();
         if (milData) setStats({ level: milData.level, exp: milData.exp, attack: milData.attack, defense: milData.defense });
 
-        // 2. Fetch Resources
-        const { data: resData } = await supabase.from('user_resources').select('wheat, iron, oil, ton_balance').eq('telegram_id', user.id).maybeSingle();
-        if (resData) {
-          setWheatBalance(resData.wheat);
-          setBalances({ iron: resData.iron || 0, oil: resData.oil || 0, ton: resData.ton_balance || 0 });
-        }
-
         // 3. Fetch Inventory
         const { data: invData } = await supabase.from('military_inventory').select('*').eq('telegram_id', user.id);
         if (invData) {
