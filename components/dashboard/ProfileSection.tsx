@@ -304,7 +304,15 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
             LVL {currentLevel}
           </div>
         </div>
-        <div>
+        <div className="flex flex-col gap-1">
+          <Link href="/appearance">
+            <motion.button 
+              whileTap={{ scale: 0.9 }}
+              className="bg-zinc-900 border border-white/10 px-3 py-1 rounded-full text-[8px] font-black uppercase text-zinc-400 hover:text-white transition-colors flex items-center gap-1 mx-auto"
+            >
+              <Zap className="w-2.5 h-2.5 text-accent-cyan" /> Appearance
+            </motion.button>
+          </Link>
           <h2 className="text-2xl font-black tracking-tight">@{userData?.username || 'Citizen'}</h2>
           <div className="flex items-center justify-center gap-2 mt-1">
             <span className="px-3 py-1 rounded bg-accent-cyan/10 border border-accent-cyan/20 text-[10px] font-black uppercase text-accent-cyan tracking-widest flex items-center gap-2">
