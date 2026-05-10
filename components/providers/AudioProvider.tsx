@@ -33,9 +33,10 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     
     if (audioRef.current) {
       audioRef.current.volume = volume;
-      if (!isMuted && hasInteracted) {
-        audioRef.current.play().catch(err => {
-          console.warn("Audio play blocked by browser policy. Interaction needed.");
+      // Pre-set volume before play attempt
+      if (!isMuted && hasInteracted && audioRef.current.paused) {
+        audioRef.current.play().catch(() => {
+          // Silent catch for initial blocked autoplay
         });
       } else if (isMuted) {
         audioRef.current.pause();
@@ -47,19 +48,23 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     const handleFirstInteraction = () => {
       if (!hasInteracted) {
         setHasInteracted(true);
-        // Play immediately on first click/touch
+        // Play immediately on first interaction
         if (audioRef.current && !isMuted) {
-          audioRef.current.play().catch(() => {});
+          audioRef.current.play().then(() => {
+            console.log("Audio started successfully on interaction");
+          }).catch((err) => {
+            console.warn("Audio play still failing on interaction:", err);
+          });
         }
       }
     };
 
-    window.addEventListener('click', handleFirstInteraction);
-    window.addEventListener('touchstart', handleFirstInteraction);
+    // More aggressive interaction detection
+    const events = ['click', 'touchstart', 'mousedown', 'keydown', 'pointerdown'];
+    events.forEach(event => window.addEventListener(event, handleFirstInteraction));
 
     return () => {
-      window.removeEventListener('click', handleFirstInteraction);
-      window.removeEventListener('touchstart', handleFirstInteraction);
+      events.forEach(event => window.removeEventListener(event, handleFirstInteraction));
     };
   }, [isMuted, hasInteracted]);
 
@@ -76,6 +81,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
         src="/background.mp3"
         loop
         preload="auto"
+        autoPlay={!isMuted}
       />
       {children}
     </AudioContext.Provider>
