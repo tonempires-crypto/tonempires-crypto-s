@@ -106,6 +106,9 @@ export default function Dashboard() {
         setCitizenId(user.id.toString().slice(-4));
         setFullUserId(user.id);
 
+        // Capture photo URL if available
+        const photoUrl = user.photo_url || null;
+
         // 1. UPSCALE: Check if user exists.
         const { data: users, error: fetchError } = await supabase
           .from('users')
@@ -120,6 +123,14 @@ export default function Dashboard() {
 
           if (data) {
           setUserData(data);
+          
+          // Update photo_url and username if they changed
+          if (user.username !== data.username || photoUrl !== data.photo_url) {
+            await supabase.from('users').update({ 
+               username: user.username,
+               photo_url: photoUrl
+            }).eq('telegram_id', user.id);
+          }
           
           // Fetch Real Private Resources from user_resources table
           let { data: resData, error: resError } = await supabase
@@ -165,6 +176,7 @@ export default function Dashboard() {
             .upsert({
               telegram_id: user.id,
               username: user.username || `User_${user.id}`,
+              photo_url: user.photo_url || null,
               ton_balance: 0,
               referred_by: referralInfo,
               last_login: new Date().toISOString(),
@@ -312,8 +324,12 @@ export default function Dashboard() {
                 onClick={() => { setActiveTab('profile'); triggerHaptic(); }}
                 className="flex items-center gap-3 text-left hover:opacity-80 transition-opacity"
               >
-                <div className="w-10 h-10 shrink-0 rounded-full bg-gradient-to-tr from-accent-cyan to-accent-blue border border-accent-cyan/30 flex items-center justify-center font-bold text-black uppercase">
-                  {userName ? userName.slice(0, 2) : '??'}
+                <div className="w-10 h-10 shrink-0 rounded-full bg-zinc-900 border border-accent-cyan/30 flex items-center justify-center font-bold text-black uppercase overflow-hidden">
+                  {userData?.photo_url ? (
+                    <img src={userData.photo_url} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-accent-cyan text-xs">{userName ? userName.slice(0, 2) : '??'}</span>
+                  )}
                 </div>
                 <div className="flex flex-col min-w-0">
                   <span className="text-[10px] text-gray-500 font-mono uppercase tracking-widest leading-none mb-1">Citizen #{citizenId}</span>

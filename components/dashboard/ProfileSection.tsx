@@ -297,8 +297,12 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
       {/* Profile Header */}
       <div className="flex flex-col items-center gap-4 text-center">
         <div className="relative">
-          <div className={`w-24 h-24 rounded-full bg-gradient-to-tr from-accent-cyan to-accent-blue border-[3px] flex items-center justify-center text-4xl font-black text-black transition-all duration-500 ${vip.border}`}>
-            {userData?.username?.slice(0, 2).toUpperCase() || '??'}
+          <div className={`w-24 h-24 rounded-full bg-zinc-900 border-[3px] flex items-center justify-center text-4xl font-black text-black transition-all duration-500 overflow-hidden ${vip.border}`}>
+            {userData?.photo_url ? (
+              <img src={userData.photo_url} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-accent-cyan">{userData?.username?.slice(0, 2).toUpperCase() || '??'}</span>
+            )}
           </div>
           <div className={`absolute -bottom-1 -right-1 text-black text-[9px] font-black px-2 py-0.5 rounded border border-black uppercase rotate-3 ${vip.level >= 10 ? 'bg-yellow-400' : 'bg-accent-cyan'}`}>
             LVL {currentLevel}

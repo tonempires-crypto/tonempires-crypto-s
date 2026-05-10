@@ -79,12 +79,20 @@ export default function RankingPage() {
           })).sort((a, b) => b.value - a.value);
           setRankings(sorted);
         } else if (empireSubTab === 'economic') {
-          // Economic ranking based on reserves in 'regions' table
-          // Refined logic: (Total Reserves / 1000) * (Growth Factor)
+          // Dashboard Logic: Max(1, (Circulation / TON)) * population * 0.01
+          const { data: stats } = await supabase.from('regional_stats').select('*');
+          
           const sorted = (regions || []).map(r => {
-            const totalRes = Number(r.oil_reserve || 0) + Number(r.gold_reserve || 0) + Number(r.iron_reserve || 0) + Number(r.wheat_reserve || 0);
-            const rate = (totalRes / 1000) * 1.5552; // Matching the vibe of user's screenshot
-            return { name: r.name, value: rate };
+            const s = stats?.find(stat => stat.region === r.id);
+            const pop = s?.population || 0;
+            const circ = s?.total_circulation || 0;
+            const ton = r.total_ton_deposited || 0;
+            
+            const rawPrice = ton > 0 ? circ / ton : 1;
+            const basePrice = Math.max(1, rawPrice);
+            const finalPrice = basePrice * pop * 0.01;
+            
+            return { name: r.name, value: finalPrice };
           }).sort((a, b) => b.value - a.value);
           setRankings(sorted);
         } else {
@@ -92,7 +100,7 @@ export default function RankingPage() {
         }
       } else {
         // Individual
-        const { data: users, error: userError } = await supabase.from('users').select('username, telegram_id, rank, region, empire_name');
+        const { data: users, error: userError } = await supabase.from('users').select('username, telegram_id, rank, region, empire_name, photo_url');
         const { data: milStats, error: milError } = await supabase.from('military_stats').select('telegram_id, attack, defense');
 
         if (userError) console.error("Error fetching users for ranking:", userError);
@@ -102,16 +110,17 @@ export default function RankingPage() {
           const processed = users.map((u: any) => {
             const mil = milStats?.find(ms => ms.telegram_id === u.telegram_id) || { attack: 0, defense: 0 };
             // Ensure rank is a number, fallback to 1
-            let userRank = 1;
+            let userRankValue = 1;
             if (u.rank) {
               const p = parseInt(u.rank.toString());
-              if (!isNaN(p)) userRank = p;
+              if (!isNaN(p)) userRankValue = p;
             }
 
             return {
-              username: u.username || `User_${u.telegram_id?.toString().slice(-4) || '??'}`,
+              username: u.username ? `@${u.username}` : `User_${u.telegram_id?.toString().slice(-4) || '??'}`,
               telegramId: u.telegram_id,
-              rank: userRank,
+              rankValue: userRankValue,
+              photoUrl: u.photo_url,
               militaryStrength: Number(mil.attack || 0) + Number(mil.defense || 0),
               empire: u.empire_name || u.region?.toUpperCase().replace('_', ' ') || 'UNALIGNED'
             };
@@ -125,8 +134,10 @@ export default function RankingPage() {
 
           const sorted = filtered.sort((a: any, b: any) => {
             if (individualSort === 'military') return b.militaryStrength - a.militaryStrength;
-            return b.rank - a.rank;
+            return b.rankValue - a.rankValue;
           });
+
+          // Store full sorted list to calculate user rank bottom display, but only show top 50
           setRankings(sorted);
         }
       }
@@ -156,7 +167,7 @@ export default function RankingPage() {
           const val = Number(item.militaryStrength || 0);
           valueDisplay = val.toLocaleString();
         } else {
-          const val = item.rank || 1;
+          const val = item.rankValue || 1;
           valueDisplay = `RANK ${val}`;
         }
       }
@@ -181,14 +192,25 @@ export default function RankingPage() {
           <div className="flex flex-col items-center justify-center w-8 h-8 rounded-lg bg-black/40 border border-white/10 font-black italic text-xs">
             {index + 1}
           </div>
-          <div className="flex flex-col">
-            <span className="text-sm font-bold text-white uppercase italic tracking-wider flex items-center gap-2">
-              {activeTab === 'empire' ? item.name : (item.username || 'Citizen')}
-              {isUser && <span className="text-[8px] bg-accent-cyan text-black px-1.5 rounded-full not-italic">YOU</span>}
-            </span>
-            <span className="text-[10px] text-zinc-500 uppercase font-mono tracking-tight">
-              {activeTab === 'empire' ? 'Strategic Sector' : item.empire}
-            </span>
+          <div className="flex items-center gap-3">
+            {activeTab === 'individual' && (
+              <div className="w-10 h-10 rounded-full bg-zinc-800 border border-white/10 overflow-hidden flex items-center justify-center">
+                {item.photoUrl ? (
+                  <img src={item.photoUrl} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <Users className="w-5 h-5 text-zinc-600" />
+                )}
+              </div>
+            )}
+            <div className="flex flex-col">
+              <span className="text-sm font-bold text-white uppercase italic tracking-wider flex items-center gap-2">
+                {activeTab === 'empire' ? item.name : (item.username || 'Citizen')}
+                {isUser && <span className="text-[8px] bg-accent-cyan text-black px-1.5 rounded-full not-italic">YOU</span>}
+              </span>
+              <span className="text-[10px] text-zinc-500 uppercase font-mono tracking-tight">
+                {activeTab === 'empire' ? 'Strategic Sector' : item.empire}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -309,7 +331,7 @@ export default function RankingPage() {
               <p className="text-[10px] font-mono text-zinc-500 uppercase animate-pulse">Calculating Hierarchy...</p>
             </div>
           ) : rankings.length > 0 ? (
-            rankings.map((item, i) => renderRankItem(item, i))
+            rankings.slice(0, 50).map((item, i) => renderRankItem(item, i))
           ) : (
             <div className="flex flex-col items-center justify-center h-64 border border-dashed border-white/10 rounded-2xl bg-zinc-900/20">
               <Zap className="w-8 h-8 text-zinc-800 mb-2" />
