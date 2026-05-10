@@ -120,7 +120,9 @@ export default function RankingPage() {
               }
 
               return {
-                username: u.username ? `@${u.username}` : `Citizen_${u.telegram_id.toString().slice(-4)}`,
+                username: u.username 
+                  ? (u.username.startsWith('@') ? u.username : `@${u.username}`) 
+                  : `Citizen_${u.telegram_id.toString().slice(-4)}`,
                 telegramId: u.telegram_id,
                 rankValue: rVal,
                 photoUrl: u.photo_url,
@@ -198,7 +200,19 @@ export default function RankingPage() {
             {activeTab === 'individual' && (
               <div className="w-10 h-10 rounded-full bg-zinc-800 border border-white/10 overflow-hidden flex items-center justify-center">
                 {item.photoUrl ? (
-                  <img src={item.photoUrl} alt="" className="w-full h-full object-cover" />
+                  <img 
+                    src={item.photoUrl} 
+                    alt="" 
+                    className="w-full h-full object-cover" 
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                      (e.target as HTMLImageElement).parentElement!.classList.add('bg-zinc-700');
+                      const span = document.createElement('span');
+                      span.className = 'text-[10px] font-black text-zinc-400';
+                      span.innerText = item.username?.replace('@', '').slice(0, 2).toUpperCase() || 'CI';
+                      (e.target as HTMLImageElement).parentElement!.appendChild(span);
+                    }}
+                  />
                 ) : (
                   <Users className="w-5 h-5 text-zinc-600" />
                 )}
@@ -206,7 +220,7 @@ export default function RankingPage() {
             )}
             <div className="flex flex-col">
               <span className="text-sm font-bold text-white uppercase italic tracking-wider flex items-center gap-2">
-                {activeTab === 'empire' ? item.name : (item.username || 'Citizen')}
+                {activeTab === 'empire' ? item.name : item.username}
                 {isUser && <span className="text-[8px] bg-accent-cyan text-black px-1.5 rounded-full not-italic">YOU</span>}
               </span>
               <span className="text-[10px] text-zinc-500 uppercase font-mono tracking-tight">

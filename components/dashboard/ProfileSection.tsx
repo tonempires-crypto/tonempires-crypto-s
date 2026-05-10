@@ -203,8 +203,8 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
     try {
       const targetRegion = userData.region || 'middle_east';
 
-      // 1. Atomic RPC Claim (The most reliable method)
-      // Only updates currency and cooldown; the DB already knows the current resource balances.
+      // 1. Core RPC Claim
+      // We pass the new balance and the tax amount.
       const { error: rpcError } = await supabase.rpc('claim_mining_with_tax', {
         p_telegram_id: userData.telegram_id,
         p_net_currency: Number(newResources.localCurrency),
@@ -213,9 +213,9 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
       });
 
       if (rpcError) {
-        console.warn("RPC Claim failed or parameters mismatched:", rpcError);
+        console.error("RPC Claim Error:", rpcError);
         
-        // Strict Fallback: Update only currency and cooldown, DO NOT overwrite resources
+        // Fallback: Update user balance and cooldown manually
         const { error: userError } = await supabase
           .from('users')
           .update({
@@ -224,21 +224,36 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
           })
           .eq('telegram_id', userData.telegram_id);
 
-        if (userError) throw userError;
+        if (userError) console.error("Manual User Update Error:", userError);
+      }
 
-        // Update Regional Treasury
-        const { data: regionData } = await supabase
+      // 2. EXPLICIT TAX ENFORCEMENT
+      // If the treasury stopped at 6, it means the RPC or previous logic is missing the increment.
+      // We perform an explicit incremental update here.
+      try {
+        const { data: regionData, error: fetchRegError } = await supabase
           .from('regions')
           .select('tax_treasury')
           .eq('id', targetRegion)
           .single();
         
-        const currentTax = Number(regionData?.tax_treasury || 0);
-        
-        await supabase
-          .from('regions')
-          .update({ tax_treasury: currentTax + taxDeduction })
-          .eq('id', targetRegion);
+        if (fetchRegError) {
+           console.error("Error fetching region for tax:", fetchRegError);
+        } else {
+          const currentTax = Number(regionData?.tax_treasury || 0);
+          const { error: updateTaxError } = await supabase
+            .from('regions')
+            .update({ tax_treasury: currentTax + taxDeduction })
+            .eq('id', targetRegion);
+          
+          if (updateTaxError) {
+             console.error("Error updating tax treasury:", updateTaxError);
+          } else {
+             console.log(`TAX UPDATED: +${taxDeduction} to ${targetRegion} Treasury. New: ${currentTax + taxDeduction}`);
+          }
+        }
+      } catch (taxErr) {
+        console.error("Tax Update Exception:", taxErr);
       }
 
       onClaimSuccess(newResources);
@@ -299,7 +314,20 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
         <div className="relative">
           <div className={`w-24 h-24 rounded-full bg-zinc-900 border-[3px] flex items-center justify-center text-4xl font-black text-black transition-all duration-500 overflow-hidden ${vip.border}`}>
             {userData?.photo_url ? (
-              <img src={userData.photo_url} alt="" className="w-full h-full object-cover" />
+              <img 
+                src={userData.photo_url} 
+                alt="" 
+                className="w-full h-full object-cover" 
+                onError={(e) => {
+                  // Fallback if image fails to load (e.g. expired Telegram link)
+                  (e.target as HTMLImageElement).style.display = 'none';
+                  (e.target as HTMLImageElement).parentElement!.classList.add('bg-gradient-to-tr', 'from-accent-cyan', 'to-accent-blue');
+                  const span = document.createElement('span');
+                  span.className = 'text-black';
+                  span.innerText = userData?.username?.slice(0, 2).toUpperCase() || '??';
+                  (e.target as HTMLImageElement).parentElement!.appendChild(span);
+                }}
+              />
             ) : (
               <span className="text-accent-cyan">{userData?.username?.slice(0, 2).toUpperCase() || '??'}</span>
             )}
@@ -317,7 +345,11 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
               <Zap className="w-2.5 h-2.5 text-accent-cyan" /> Appearance
             </motion.button>
           </Link>
-          <h2 className="text-2xl font-black tracking-tight">@{userData?.username || 'Citizen'}</h2>
+          <h2 className="text-2xl font-black tracking-tight">
+            {userData?.username 
+              ? (userData.username.startsWith('@') ? userData.username : `@${userData.username}`) 
+              : 'Citizen'}
+          </h2>
           <div className="flex items-center justify-center gap-2 mt-1">
             <span className="px-3 py-1 rounded bg-accent-cyan/10 border border-accent-cyan/20 text-[10px] font-black uppercase text-accent-cyan tracking-widest flex items-center gap-2">
               <div className="w-1.5 h-1.5 rounded-full bg-accent-cyan animate-pulse" />
