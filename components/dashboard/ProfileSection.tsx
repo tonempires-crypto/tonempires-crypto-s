@@ -21,21 +21,42 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
   const [loadingEstate, setLoadingEstate] = useState(true);
   const [vipPoints, setVipPoints] = useState(0);
 
-  // VIP Logic
-  const getVipData = (points: number) => {
-    if (points >= 240000) return { level: 10, border: 'border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.5)]', atk: 30, def: 20, name: 'Luxurious Gold' };
-    if (points >= 120000) return { level: 9, border: 'border-red-600 shadow-[0_0_20px_rgba(220,38,38,0.5)]', atk: 20, def: 10, name: 'Elite Red' };
-    if (points >= 64000) return { level: 8, border: 'border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.4)]', atk: 12, def: 4, name: 'Advanced Red' };
-    if (points >= 32000) return { level: 7, border: 'border-blue-600 shadow-[0_0_20px_rgba(37,99,235,0.5)]', atk: 8, def: 2, name: 'Sovereign Blue' };
-    if (points >= 16000) return { level: 6, border: 'border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.4)]', atk: 4, def: 1, name: 'Executive Blue' };
-    if (points >= 8000) return { level: 5, border: 'border-blue-400 shadow-[0_0_10px_rgba(96,165,250,0.3)]', atk: 3, def: 0, name: 'Blue Initiate' };
-    if (points >= 4000) return { level: 3, border: 'border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.4)]', atk: 2, def: 0, name: 'Noble Green' };
-    if (points >= 2000) return { level: 2, border: 'border-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.3)]', atk: 1, def: 0, name: 'Green Elite' };
-    if (points >= 1000) return { level: 1, border: 'border-emerald-400', atk: 0, def: 0, name: 'Green Member' };
-    return { level: 0, border: 'border-accent-cyan/30', atk: 0, def: 0, name: 'No VIP' };
+  // VIP Level Definitions
+  const VIP_LEVELS = [
+    { level: 0, min: 0, name: 'Citizen', color: 'text-zinc-500', bg: 'bg-zinc-500', privileges: ['Base Mining Rate', 'Standard Access'] },
+    { level: 1, min: 1000, name: 'Green Member', color: 'text-emerald-400', bg: 'bg-emerald-400', privileges: ['Base Mining Rate', 'Standard Access'] },
+    { level: 2, min: 2000, name: 'Green Elite', color: 'text-emerald-400', bg: 'bg-emerald-400', privileges: ['ATK +1%', 'Standard Access'] },
+    { level: 3, min: 4000, name: 'Noble Green', color: 'text-emerald-500', bg: 'bg-emerald-500', privileges: ['ATK +2%', 'Standard Access'] },
+    { level: 4, min: 8000, name: 'Blue Initiate', color: 'text-blue-400', bg: 'bg-blue-400', privileges: ['ATK +3%', 'Standard Access'] },
+    { level: 5, min: 16000, name: 'Executive Blue', color: 'text-blue-500', bg: 'bg-blue-500', privileges: ['ATK +4%', 'DEF +1%'] },
+    { level: 6, min: 32000, name: 'Sovereign Blue', color: 'text-blue-600', bg: 'bg-blue-600', privileges: ['ATK +8%', 'DEF +2%', 'Priority Support'] },
+    { level: 7, min: 64000, name: 'Advanced Red', color: 'text-red-500', bg: 'bg-red-500', privileges: ['ATK +12%', 'DEF +4%', 'Elite Badge'] },
+    { level: 8, min: 120000, name: 'Elite Red', color: 'text-red-600', bg: 'bg-red-600', privileges: ['ATK +20%', 'DEF +10%', 'Imperial Advisor'] },
+    { level: 9, min: 240000, name: 'Luxurious Gold', color: 'text-yellow-400', bg: 'bg-yellow-400', privileges: ['ATK +30%', 'DEF +20%', 'Gold Border'] },
+    { level: 10, min: 500000, name: 'Imperial Legend', color: 'text-yellow-500', bg: 'bg-yellow-500', privileges: ['ATK +50%', 'DEF +30%', 'Ultimate Status'] }
+  ];
+
+  const getVipInfo = (points: number) => {
+    let currentVip = VIP_LEVELS[0];
+    let nextVip = VIP_LEVELS[1];
+    
+    for (let i = 0; i < VIP_LEVELS.length; i++) {
+      if (points >= VIP_LEVELS[i].min) {
+        currentVip = VIP_LEVELS[i];
+        nextVip = VIP_LEVELS[i + 1] || VIP_LEVELS[i];
+      } else {
+        break;
+      }
+    }
+    
+    const progressToNext = nextVip.level === currentVip.level 
+      ? 100 
+      : ((points - currentVip.min) / (nextVip.min - currentVip.min)) * 100;
+
+    return { current: currentVip, next: nextVip, progress: progressToNext };
   };
 
-  const vip = getVipData(vipPoints);
+  const vipInfo = getVipInfo(vipPoints);
 
   // RANK DEFINITIONS (1-100)
   const getRankData = (level: number) => {
@@ -269,28 +290,10 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
 
   return (
     <div className="space-y-6 pb-24">
-      {/* VIP Status Bar */}
-      {vip.level > 0 && (
-        <motion.div 
-          initial={{ opacity: 0, y: -10 }} 
-          animate={{ opacity: 1, y: 0 }}
-          className={`mx-4 p-2 rounded-lg border flex items-center justify-between bg-black/40 ${vip.border.split(' ')[0]}`}
-        >
-          <div className="flex items-center gap-2">
-             <Trophy className={`w-3 h-3 ${vip.level >= 10 ? 'text-yellow-400' : vip.level >= 8 ? 'text-red-500' : vip.level >= 5 ? 'text-blue-500' : 'text-emerald-500'}`} />
-             <span className="text-[9px] font-black uppercase tracking-widest text-white">VIP LEVEL {vip.level}: {vip.name}</span>
-          </div>
-          <div className="flex gap-2">
-            {vip.atk > 0 && <span className="text-[8px] font-mono text-red-400">ATK +{vip.atk}%</span>}
-            {vip.def > 0 && <span className="text-[8px] font-mono text-blue-400">DEF +{vip.def}%</span>}
-          </div>
-        </motion.div>
-      )}
-
       {/* Profile Header */}
-      <div className="flex flex-col items-center gap-4 text-center">
+      <div className="flex flex-col items-center gap-4 text-center mt-4">
         <div className="relative">
-          <div className={`w-24 h-24 rounded-full bg-zinc-900 border-[3px] flex items-center justify-center text-4xl font-black text-black transition-all duration-500 overflow-hidden ${vip.border}`}>
+          <div className="w-24 h-24 rounded-full bg-zinc-900 border-[3px] border-zinc-800 flex items-center justify-center text-4xl font-black text-black transition-all duration-500 overflow-hidden">
             {userData?.photo_url ? (
               <img 
                 src={userData.photo_url} 
@@ -310,7 +313,7 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
               <span className="text-accent-cyan">{userData?.username?.slice(0, 2).toUpperCase() || '??'}</span>
             )}
           </div>
-          <div className={`absolute -bottom-1 -right-1 text-black text-[9px] font-black px-2 py-0.5 rounded border border-black uppercase rotate-3 ${vip.level >= 10 ? 'bg-yellow-400' : 'bg-accent-cyan'}`}>
+          <div className="absolute -bottom-1 -right-1 bg-accent-cyan text-black text-[9px] font-black px-2 py-0.5 rounded border border-black uppercase rotate-3">
             LVL {currentLevel}
           </div>
         </div>
@@ -328,16 +331,67 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
               ? (userData.username.startsWith('@') ? userData.username : `@${userData.username}`) 
               : 'Citizen'}
           </h2>
-          <div className="flex items-center justify-center gap-2 mt-1">
+          <div className="flex items-center justify-center gap-2 mt-1 mb-2">
             <span className="px-3 py-1 rounded bg-accent-cyan/10 border border-accent-cyan/20 text-[10px] font-black uppercase text-accent-cyan tracking-widest flex items-center gap-2">
               <div className="w-1.5 h-1.5 rounded-full bg-accent-cyan animate-pulse" />
               {getRankData(currentLevel).title}
             </span>
-            {vip.level > 0 && (
-              <span className="px-3 py-1 rounded bg-white/5 border border-white/10 text-[10px] font-black uppercase text-zinc-400 tracking-widest">
-                {vipPoints.toLocaleString()} PTS
-              </span>
-            )}
+          </div>
+
+          {/* NEW VIP PROGRESS BAR SECTION */}
+          <div className="w-full max-w-[280px] mx-auto space-y-3 mt-2">
+             <div className="flex justify-between items-end">
+               <div className="flex flex-col items-start">
+                 <span className="text-[8px] font-mono text-zinc-500 uppercase tracking-widest">VIP Level</span>
+                 <span className={`text-xs font-black uppercase italic ${vipInfo.current.color}`}>
+                   {vipInfo.current.name} (LVL {vipInfo.current.level})
+                 </span>
+               </div>
+               <div className="flex flex-col items-end">
+                 <span className="text-[8px] font-mono text-zinc-500 uppercase tracking-widest">Points</span>
+                 <span className="text-xs font-black text-white">{vipPoints.toLocaleString()} <span className="text-[8px] text-zinc-500">PTS</span></span>
+               </div>
+             </div>
+
+             {/* Progress Bar */}
+             <div className="h-1.5 w-full bg-zinc-900 border border-white/5 rounded-full overflow-hidden">
+               <motion.div 
+                 initial={{ width: 0 }}
+                 animate={{ width: `${vipInfo.progress}%` }}
+                 className={`h-full ${vipInfo.current.bg} shadow-[0_0_10px_rgba(0,0,0,0.5)]`}
+               />
+             </div>
+             
+             {vipInfo.current.level < 10 && (
+               <div className="flex justify-between text-[7px] font-mono text-zinc-500 uppercase tracking-tighter">
+                 <span>LVL {vipInfo.current.level}</span>
+                 <span>{vipPoints.toLocaleString()} / {vipInfo.next.min.toLocaleString()} to LVL {vipInfo.next.level}</span>
+               </div>
+             )}
+
+             {/* Privileges Display */}
+             <div className="grid grid-cols-2 gap-2 mt-4 text-left">
+               <div className="p-2 rounded-lg bg-white/5 border border-white/5">
+                 <span className="text-[7px] font-black text-zinc-500 uppercase block mb-1">Current Perks</span>
+                 <ul className="space-y-0.5">
+                   {vipInfo.current.privileges.map((p, i) => (
+                     <li key={i} className="text-[8px] font-bold text-emerald-400 flex items-center gap-1">
+                       <Shield className="w-2 h-2 shrink-0" /> {p}
+                     </li>
+                   ))}
+                 </ul>
+               </div>
+               <div className="p-2 rounded-lg bg-white/5 border border-white/5">
+                 <span className="text-[7px] font-black text-zinc-500 uppercase block mb-1">Next Level Bonus</span>
+                 <ul className="space-y-0.5">
+                   {vipInfo.next.privileges.map((p, i) => (
+                     <li key={i} className="text-[8px] font-bold text-zinc-400 flex items-center gap-1 italic">
+                       <ArrowRight className="w-2 h-2 shrink-0" /> {p}
+                     </li>
+                   ))}
+                 </ul>
+               </div>
+             </div>
           </div>
         </div>
       </div>

@@ -91,56 +91,18 @@ export default function CompaniesSection({ userData, resources }: CompaniesSecti
         await supabase.from('companies').delete().in('id', toDelete);
       }
 
-      // Live Worker Sync (Fallbacks to direct count if RPC missing)
-      const { data: workerCounts, error: workerError } = await supabase.rpc('get_company_worker_counts');
-      
-      let counts = workerCounts || [];
-      if (workerError || !workerCounts) {
-        console.warn("RPC Worker Count Failed, attempting aggregate query...");
-        const { data: aggregate } = await supabase
-          .from('users')
-          .select('working_at_id')
-          .not('working_at_id', 'is', null);
-        
-        const map: Record<string, number> = {};
-        aggregate?.forEach((u: any) => {
-          map[u.working_at_id] = (map[u.working_at_id] || 0) + 1;
-        });
-        counts = Object.entries(map).map(([id, count]) => ({ company_id: id, count }));
-      }
-
+      // Live Worker Sync removed to reduce DB load as per user request
       const syncedGov = finalGovs.map(c => ({
         ...c,
-        employees_count: counts?.find((w: any) => w.company_id === c.id)?.count || 0
+        employees_count: 0
       }));
-
-      // HARD SYNC: Only if changed
-      for (const c of syncedGov) {
-        const existing = gov.find(g => g.id === c.id);
-        if (existing && existing.employees_count !== c.employees_count) {
-          await supabase
-            .from('companies')
-            .update({ employees_count: c.employees_count })
-            .eq('id', c.id);
-        }
-      }
 
       setGovCompanies(syncedGov);
       
       const syncedPriv = priv.map(c => ({
         ...c,
-        employees_count: counts?.find((w: any) => w.company_id === c.id)?.count || 0
+        employees_count: 0
       }));
-
-      for (const c of syncedPriv) {
-        const existing = priv.find(p => p.id === c.id);
-        if (existing && existing.employees_count !== c.employees_count) {
-          await supabase
-            .from('companies')
-            .update({ employees_count: c.employees_count })
-            .eq('id', c.id);
-        }
-      }
 
       setPrivateCompanies(syncedPriv);
     } catch (e) {
@@ -431,10 +393,6 @@ export default function CompaniesSection({ userData, resources }: CompaniesSecti
                       <span className="text-[8px] px-1.5 py-0.5 rounded bg-white/5 text-zinc-500 border border-white/10 uppercase">{company.resource_type}</span>
                     </div>
                     <div className="flex gap-4 mt-1">
-                      <div className="flex items-center gap-1.5 grayscale opacity-60">
-                         <Users className="w-3 h-3" />
-                         <span className="text-[9px] font-mono">{company.employees_count || 0} Citizens</span>
-                      </div>
                       <div className="flex items-center gap-1.5 text-accent-cyan">
                          <TrendingUp className="w-3 h-3" />
                          <span className="text-[9px] font-mono">+{getProduction(company)}/hr Treasury</span>
@@ -506,10 +464,6 @@ export default function CompaniesSection({ userData, resources }: CompaniesSecti
                   <div className="flex flex-col gap-1">
                     <span className="text-sm font-bold text-white uppercase">{company.name}</span>
                     <div className="flex gap-4 mt-1">
-                      <div className="flex items-center gap-1.5 text-zinc-500">
-                         <Users className="w-3 h-3" />
-                         <span className="text-[9px] font-mono">{company.employees_count || 0} Staff</span>
-                      </div>
                       <div className="flex items-center gap-1.5 text-emerald-500">
                          <TrendingUp className="w-3 h-3" />
                          <span className="text-[9px] font-mono">+{getProduction(company)}/hr Net</span>
