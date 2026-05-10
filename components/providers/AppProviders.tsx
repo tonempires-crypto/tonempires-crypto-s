@@ -3,6 +3,7 @@
 import { THEME, TonConnectUIProvider } from '@tonconnect/ui-react';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { AudioProvider } from './AudioProvider';
 
 export default function AppProviders({ children }: { children: React.ReactNode }) {
   useEffect(() => {
@@ -32,7 +33,9 @@ export default function AppProviders({ children }: { children: React.ReactNode }
       manifestUrl="https://tonempires-crypto-s.vercel.app/tonconnect-manifest.json"
       uiPreferences={{ theme: THEME.DARK }}
     >
-      {children}
+      <AudioProvider>
+        {children}
+      </AudioProvider>
     </TonConnectUIProvider>
   );
 }

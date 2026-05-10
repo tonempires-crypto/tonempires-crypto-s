@@ -1,27 +1,13 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Settings, Globe, Volume2, VolumeX, ChevronRight, Volume1 } from 'lucide-react';
+import { useAudio } from '@/components/providers/AudioProvider';
 
 export default function SettingsMenu() {
   const [isOpen, setIsOpen] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
-  const [volume, setVolume] = useState(0.5);
-  const audioRef = useRef<HTMLAudioElement>(null);
-
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = volume;
-      if (!isMuted) {
-        audioRef.current.play().catch(err => {
-          console.warn("Audio autoplay blocked or failed:", err);
-        });
-      } else {
-        audioRef.current.pause();
-      }
-    }
-  }, [volume, isMuted]);
+  const { isMuted, setIsMuted, volume, setVolume } = useAudio();
 
   const toggleMute = () => {
     setIsMuted(!isMuted);
@@ -29,13 +15,6 @@ export default function SettingsMenu() {
 
   return (
     <div className="relative">
-      <audio
-        ref={audioRef}
-        src="/background.mp3"
-        loop
-        autoPlay
-      />
-      
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="p-2 bg-zinc-900 border border-white/10 rounded-xl hover:bg-zinc-800 transition-all active:scale-95 text-zinc-400 hover:text-white shadow-xl"
