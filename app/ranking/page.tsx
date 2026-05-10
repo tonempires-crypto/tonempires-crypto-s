@@ -107,24 +107,27 @@ export default function RankingPage() {
         if (milError) console.error("Error fetching military stats for ranking:", milError);
 
         if (users) {
-          const processed = users.map((u: any) => {
-            const mil = milStats?.find(ms => ms.telegram_id === u.telegram_id) || { attack: 0, defense: 0 };
-            // Ensure rank is a number, fallback to 1
-            let userRankValue = 1;
-            if (u.rank) {
-              const p = parseInt(u.rank.toString());
-              if (!isNaN(p)) userRankValue = p;
-            }
+          const processed = users
+            .filter((u: any) => u.telegram_id) // Filter out broken/empty records
+            .map((u: any) => {
+              const mil = milStats?.find(ms => ms.telegram_id === u.telegram_id) || { attack: 0, defense: 0 };
+              
+              // Ensure rank is a number
+              let rVal = 1;
+              if (u.rank) {
+                const parsed = parseInt(u.rank.toString());
+                if (!isNaN(parsed)) rVal = parsed;
+              }
 
-            return {
-              username: u.username ? `@${u.username}` : `User_${u.telegram_id?.toString().slice(-4) || '??'}`,
-              telegramId: u.telegram_id,
-              rankValue: userRankValue,
-              photoUrl: u.photo_url,
-              militaryStrength: Number(mil.attack || 0) + Number(mil.defense || 0),
-              empire: u.empire_name || u.region?.toUpperCase().replace('_', ' ') || 'UNALIGNED'
-            };
-          });
+              return {
+                username: u.username ? `@${u.username}` : `Citizen_${u.telegram_id.toString().slice(-4)}`,
+                telegramId: u.telegram_id,
+                rankValue: rVal,
+                photoUrl: u.photo_url,
+                militaryStrength: Number(mil.attack || 0) + Number(mil.defense || 0),
+                empire: u.empire_name || u.region?.toUpperCase().replace('_', ' ') || 'UNALIGNED'
+              };
+            });
 
           let filtered = processed;
           const targetEmpire = userEmpire || userData?.region?.toUpperCase().replace('_', ' ');
@@ -137,7 +140,6 @@ export default function RankingPage() {
             return b.rankValue - a.rankValue;
           });
 
-          // Store full sorted list to calculate user rank bottom display, but only show top 50
           setRankings(sorted);
         }
       }
