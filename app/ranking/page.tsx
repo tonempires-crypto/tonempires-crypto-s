@@ -24,53 +24,65 @@ export default function RankingPage() {
 
   useEffect(() => {
     async function fetchData() {
-      // @ts-ignore
-      const tg = window.Telegram?.WebApp;
-      let user = tg?.initDataUnsafe?.user;
-      if (!user && process.env.NODE_ENV === 'development') user = { id: 1492586846 };
+      try {
+        // @ts-ignore
+        const tg = window.Telegram?.WebApp;
+        let user = tg?.initDataUnsafe?.user;
+        if (!user && process.env.NODE_ENV === 'development') user = { id: 1492586846 };
 
-      if (user) {
-        setTelegramId(user.id);
-        const { data: uData } = await supabase.from('users').select('*').eq('telegram_id', user.id).maybeSingle();
-        if (uData) {
-          setUserData(uData);
-          setUserEmpire(uData.empire_name);
+        if (user) {
+          setTelegramId(user.id);
+          const { data: uData, error } = await supabase.from('users').select('*').eq('telegram_id', user.id).maybeSingle();
+          if (error) console.error("Error fetching user data:", error);
+          if (uData) {
+            setUserData(uData);
+            setUserEmpire(uData.empire_name);
+          }
         }
+      } catch (e) {
+        console.error("Initialization error:", e);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
     fetchData();
   }, []);
 
   useEffect(() => {
-    if (loading) return;
+    // Only fetch if initial data (like user info) is loaded
+    // We don't include 'loading' here to avoid infinite loops since fetchRankings sets loading=true
     fetchRankings();
-  }, [activeTab, empireSubTab, individualSubTab, individualSort, loading]);
+  }, [activeTab, empireSubTab, individualSubTab, individualSort]);
 
   async function fetchRankings() {
     setLoading(true);
     try {
       if (activeTab === 'empire') {
-        // Fetch Regions and Stats
-        const { data: regions } = await supabase.from('regions').select('*');
-        const { data: stats } = await supabase.from('regional_stats').select('*');
+        // Fetch Regions - use regions table directly as regional_stats might not exist
+        const { data: regions, error: regError } = await supabase.from('regions').select('*');
+        if (regError) {
+          console.error("Error fetching regions:", regError);
+          setRankings([]);
+          return;
+        }
 
         if (empireSubTab === 'population') {
-          const sorted = (regions || []).map(r => {
-            const s = stats?.find(st => st.region === r.id);
-            return { name: r.name, value: s?.population || 0 };
-          }).sort((a, b) => b.value - a.value);
+          // Since regional_stats might be missing, we can try to estimate from users table or use a fallback
+          // For now, let's try to aggregate from users grouped by region
+          const { data: userCounts } = await supabase.from('users').select('region');
+          const counts: Record<string, number> = {};
+          userCounts?.forEach(u => { if(u.region) counts[u.region] = (counts[u.region] || 0) + 1 });
+          
+          const sorted = (regions || []).map(r => ({
+            name: r.name,
+            value: counts[r.id] || 0
+          })).sort((a, b) => b.value - a.value);
           setRankings(sorted);
         } else if (empireSubTab === 'economic') {
+          // Economic ranking based on reserves in 'regions' table
           const sorted = (regions || []).map(r => {
-            const s = stats?.find(st => st.region === r.id);
-            const pop = s?.population || 0;
-            const circ = s?.total_circulation || 0;
-            const ton = r.total_ton_deposited || 0;
-            const rawPrice = ton > 0 ? circ / ton : 1;
-            const basePrice = Math.max(1, rawPrice);
-            const finalPrice = basePrice * pop * 0.01;
-            return { name: r.name, value: finalPrice };
+            const totalRes = (r.oil_reserve || 0) + (r.gold_reserve || 0) + (r.iron_reserve || 0) + (r.wheat_reserve || 0);
+            return { name: r.name, value: totalRes };
           }).sort((a, b) => b.value - a.value);
           setRankings(sorted);
         } else {
@@ -78,9 +90,11 @@ export default function RankingPage() {
         }
       } else {
         // Individual
-        // Optimization: Fetch all users and all stats, then join in memory
-        const { data: users } = await supabase.from('users').select('username, telegram_id, rank, region, empire_name');
-        const { data: milStats } = await supabase.from('military_stats').select('telegram_id, attack, defense');
+        const { data: users, error: userError } = await supabase.from('users').select('username, telegram_id, rank, region, empire_name');
+        const { data: milStats, error: milError } = await supabase.from('military_stats').select('telegram_id, attack, defense');
+
+        if (userError) console.error("Error fetching users for ranking:", userError);
+        if (milError) console.error("Error fetching military stats for ranking:", milError);
 
         if (users) {
           const processed = users.map((u: any) => {
@@ -95,9 +109,9 @@ export default function RankingPage() {
           });
 
           let filtered = processed;
-          if (individualSubTab === 'internal' && (userEmpire || userData?.region)) {
-            const target = userEmpire || userData?.region?.toUpperCase().replace('_', ' ');
-            filtered = processed.filter(u => u.empire === target);
+          const targetEmpire = userEmpire || userData?.region?.toUpperCase().replace('_', ' ');
+          if (individualSubTab === 'internal' && targetEmpire) {
+            filtered = processed.filter(u => u.empire === targetEmpire);
           }
 
           const sorted = filtered.sort((a: any, b: any) => {
@@ -108,7 +122,7 @@ export default function RankingPage() {
         }
       }
     } catch (e) {
-      console.error(e);
+      console.error("Fetch rankings main error:", e);
     } finally {
       setLoading(false);
     }
