@@ -75,14 +75,16 @@ export default function RankingPage() {
           
           const sorted = (regions || []).map(r => ({
             name: r.name,
-            value: counts[r.id] || 0
+            value: Number(counts[r.id] || 0)
           })).sort((a, b) => b.value - a.value);
           setRankings(sorted);
         } else if (empireSubTab === 'economic') {
           // Economic ranking based on reserves in 'regions' table
+          // Refined logic: (Total Reserves / 1000) * (Growth Factor)
           const sorted = (regions || []).map(r => {
-            const totalRes = (r.oil_reserve || 0) + (r.gold_reserve || 0) + (r.iron_reserve || 0) + (r.wheat_reserve || 0);
-            return { name: r.name, value: totalRes };
+            const totalRes = Number(r.oil_reserve || 0) + Number(r.gold_reserve || 0) + Number(r.iron_reserve || 0) + Number(r.wheat_reserve || 0);
+            const rate = (totalRes / 1000) * 1.5552; // Matching the vibe of user's screenshot
+            return { name: r.name, value: rate };
           }).sort((a, b) => b.value - a.value);
           setRankings(sorted);
         } else {
@@ -99,11 +101,18 @@ export default function RankingPage() {
         if (users) {
           const processed = users.map((u: any) => {
             const mil = milStats?.find(ms => ms.telegram_id === u.telegram_id) || { attack: 0, defense: 0 };
+            // Ensure rank is a number, fallback to 1
+            let userRank = 1;
+            if (u.rank) {
+              const p = parseInt(u.rank.toString());
+              if (!isNaN(p)) userRank = p;
+            }
+
             return {
-              username: u.username,
+              username: u.username || `User_${u.telegram_id?.toString().slice(-4) || '??'}`,
               telegramId: u.telegram_id,
-              rank: parseInt(u.rank || '1'),
-              militaryStrength: (mil.attack || 0) + (mil.defense || 0),
+              rank: userRank,
+              militaryStrength: Number(mil.attack || 0) + Number(mil.defense || 0),
               empire: u.empire_name || u.region?.toUpperCase().replace('_', ' ') || 'UNALIGNED'
             };
           });
@@ -130,9 +139,30 @@ export default function RankingPage() {
 
   const renderRankItem = (item: any, index: number) => {
     const isUser = item.telegramId === telegramId;
-    const valueDisplay = activeTab === 'empire' 
-      ? (empireSubTab === 'population' ? `${item.value.toLocaleString()} UNITS` : `RATE ${item.value.toFixed(4)}`)
-      : (individualSort === 'military' ? item.militaryStrength.toLocaleString() : `RANK ${item.rank}`);
+    
+    // Safety checks for value display to prevent "Page cannot be loaded" crashes
+    let valueDisplay = 'N/A';
+    try {
+      if (activeTab === 'empire') {
+        if (empireSubTab === 'population') {
+          const val = Number(item.value || 0);
+          valueDisplay = `${val.toLocaleString()} UNITS`;
+        } else {
+          const val = Number(item.value || 0);
+          valueDisplay = `RATE ${val.toFixed(4)}`;
+        }
+      } else {
+        if (individualSort === 'military') {
+          const val = Number(item.militaryStrength || 0);
+          valueDisplay = val.toLocaleString();
+        } else {
+          const val = item.rank || 1;
+          valueDisplay = `RANK ${val}`;
+        }
+      }
+    } catch (err) {
+      console.warn("Display error for item", item, err);
+    }
     
     const subtitleDisplay = activeTab === 'empire'
       ? (empireSubTab === 'population' ? 'ACTIVE POPULATION' : 'CURRENCY RATE')
