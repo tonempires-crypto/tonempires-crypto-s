@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import Script from "next/script";
 import AppProviders from "@/components/providers/AppProviders";
+import IntroOverlay from "@/components/ui/IntroOverlay";
 
 const inter = Inter({
   variable: "--font-sans",
@@ -36,6 +37,7 @@ export default function RootLayout({
         className={`${inter.variable} ${jetbrainsMono.variable} antialiased bg-industrial-bg text-[#E0E0E0] h-screen overflow-hidden`}
       >
         <AppProviders>
+          <IntroOverlay />
           <main className="h-full w-full bg-industrial-bg relative flex flex-col max-w-md mx-auto overflow-y-auto">
             {children}
           </main>

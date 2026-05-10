@@ -69,8 +69,11 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
   }, [isMuted, hasInteracted]);
 
   const playAudio = () => {
-    if (audioRef.current && !isMuted) {
-      audioRef.current.play().catch(() => {});
+    setHasInteracted(true);
+    if (audioRef.current) {
+      audioRef.current.play().catch(err => {
+        console.warn("Manual audio trigger failed:", err);
+      });
     }
   };
 
