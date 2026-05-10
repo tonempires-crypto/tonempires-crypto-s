@@ -1,12 +1,36 @@
 'use client';
 
 import { motion } from 'motion/react';
-import { Users, Copy, Share2, Award, Zap } from 'lucide-react';
+import { Users, Copy, Share2, Award, Zap, Coins, TrendingUp } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabaseClient';
 
 export default function ReferralSection({ userId }: { userId: string | number }) {
   const [copied, setCopied] = useState(false);
+  const [referralCount, setReferralCount] = useState(0);
+  const [loading, setLoading] = useState(true);
   const referralLink = `https://t.me/TONEMPIRES_bot/play?startapp=${userId}`;
+
+  useEffect(() => {
+    async function fetchReferralData() {
+      if (!userId) return;
+      try {
+        const { count, error } = await supabase
+          .from('users')
+          .select('*', { count: 'exact', head: true })
+          .eq('referred_by', userId);
+
+        if (!error && count !== null) {
+          setReferralCount(count);
+        }
+      } catch (err) {
+        console.error("Error fetching referrals:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchReferralData();
+  }, [userId]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(referralLink);
@@ -22,10 +46,10 @@ export default function ReferralSection({ userId }: { userId: string | number })
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-12">
       <motion.div 
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
         className="tech-card bg-gradient-to-br from-accent-cyan/10 to-transparent border-accent-cyan/20"
       >
         <div className="flex items-center gap-3 mb-4">
@@ -34,7 +58,7 @@ export default function ReferralSection({ userId }: { userId: string | number })
           </div>
           <div>
             <h2 className="text-lg font-black tracking-tight uppercase">Imperial Recruitment</h2>
-            <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest">Growth Phase: Active</p>
+            <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest">Growth Phase: Expansion</p>
           </div>
         </div>
 
@@ -66,24 +90,58 @@ export default function ReferralSection({ userId }: { userId: string | number })
         </div>
       </motion.div>
 
+      {/* Rewards Description */}
+      <section className="space-y-3">
+        <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500">Recruitment Rewards</h3>
+        <div className="grid gap-3">
+          <div className="bg-zinc-900/50 border border-white/5 p-4 rounded-2xl flex items-center gap-4">
+            <div className="w-10 h-10 rounded-full bg-accent-orange/10 flex items-center justify-center shrink-0">
+              <Coins className="w-5 h-5 text-accent-orange" />
+            </div>
+            <div>
+              <div className="text-xs font-bold text-white uppercase italic">20% Deposit Commission</div>
+              <p className="text-[10px] text-zinc-500">Earn 20% of every TON deposit made by your recruits instantly.</p>
+            </div>
+          </div>
+          
+          <div className="bg-zinc-900/50 border border-white/5 p-4 rounded-2xl flex items-center gap-4">
+            <div className="w-10 h-10 rounded-full bg-accent-cyan/10 flex items-center justify-center shrink-0">
+              <TrendingUp className="w-5 h-5 text-accent-cyan" />
+            </div>
+            <div>
+              <div className="text-xs font-bold text-white uppercase italic">10% Yield Bonus</div>
+              <p className="text-[10px] text-zinc-500">Receive 10% of your recruits' mining yield as a bonus for leading the expansion.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <div className="grid grid-cols-2 gap-3">
-        <div className="bento-card p-4 space-y-2">
+        <div className="bento-card p-4 space-y-2 bg-[#111114]">
           <div className="flex justify-between items-start">
             <Zap className="w-4 h-4 text-accent-orange" />
-            <span className="text-[10px] font-mono text-zinc-500">BOOST</span>
+            <span className="text-[10px] font-mono text-zinc-500 uppercase">Status</span>
           </div>
-          <div className="text-2xl font-black text-white">20%</div>
-          <p className="text-[9px] text-zinc-500 leading-tight">Bonus from all friend deposits</p>
+          <div className="text-2xl font-black text-white italic">ELITE</div>
+          <p className="text-[9px] text-zinc-500 leading-tight">Tier 1 Recruiter Status</p>
         </div>
         
-        <div className="bento-card p-4 space-y-2">
+        <div className="bento-card p-4 space-y-2 bg-[#111114]">
           <div className="flex justify-between items-start">
-            <Award className="w-4 h-4 text-accent-blue" />
-            <span className="text-[10px] font-mono text-zinc-500">RANK</span>
+            <Award className="w-4 h-4 text-accent-cyan" />
+            <span className="text-[10px] font-mono text-zinc-500 uppercase">Growth</span>
           </div>
-          <div className="text-2xl font-black text-white">#0</div>
-          <p className="text-[9px] text-zinc-500 leading-tight">Total successful recruits</p>
+          <div className="text-2xl font-black text-white tracking-tighter">
+            {loading ? '...' : `#${referralCount}`}
+          </div>
+          <p className="text-[9px] text-zinc-500 leading-tight">Total successful recruits in your lineage</p>
         </div>
+      </div>
+
+      {/* Encouragement Banner */}
+      <div className="p-4 bg-gradient-to-r from-accent-cyan/20 to-transparent rounded-2xl border border-accent-cyan/10 text-center">
+        <p className="text-xs font-bold text-accent-cyan uppercase italic">The Empire thrives on your connection.</p>
+        <p className="text-[9px] text-zinc-500 mt-1 uppercase tracking-widest">Every citizen makes the Kingdom stronger.</p>
       </div>
     </div>
   );
