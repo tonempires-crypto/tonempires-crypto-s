@@ -201,65 +201,43 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
     };
 
     try {
-      const targetRegion = userData.region || 'middle_east';
+      // Ensure we use the exact ID format (lowercase, no spaces) to match regions table
+      const targetRegion = (userData.region || 'middle_east').toLowerCase().trim();
+      
+      // Calculate clean decimal values for the DB
+      const netBalance = parseFloat(newResources.localCurrency.toFixed(4));
+      const taxAmount = parseFloat(taxDeduction.toFixed(4));
 
-      // 1. Core RPC Claim
-      // We pass the new balance and the tax amount.
+      // 1. Core RPC Claim (The only way to bypass RLS for the treasury)
       const { error: rpcError } = await supabase.rpc('claim_mining_with_tax', {
         p_telegram_id: userData.telegram_id,
-        p_net_currency: Number(newResources.localCurrency),
-        p_tax_amount: Number(taxDeduction),
+        p_net_currency: netBalance,
+        p_tax_amount: taxAmount,
         p_region_id: targetRegion
       });
 
       if (rpcError) {
-        console.error("RPC Claim Error:", rpcError);
+        console.error("RPC Tax Claim Failed:", rpcError);
         
-        // Fallback: Update user balance and cooldown manually
+        // Fallback: Update user balance only (Treasury will fail unless RPC works)
         const { error: userError } = await supabase
           .from('users')
           .update({
-            local_currency_balance: newResources.localCurrency,
+            local_currency_balance: netBalance,
             last_claim: new Date().toISOString()
           })
           .eq('telegram_id', userData.telegram_id);
 
-        if (userError) console.error("Manual User Update Error:", userError);
-      }
-
-      // 2. EXPLICIT TAX ENFORCEMENT
-      // If the treasury stopped at 6, it means the RPC or previous logic is missing the increment.
-      // We perform an explicit incremental update here.
-      try {
-        const { data: regionData, error: fetchRegError } = await supabase
-          .from('regions')
-          .select('tax_treasury')
-          .eq('id', targetRegion)
-          .single();
-        
-        if (fetchRegError) {
-           console.error("Error fetching region for tax:", fetchRegError);
-        } else {
-          const currentTax = Number(regionData?.tax_treasury || 0);
-          const { error: updateTaxError } = await supabase
-            .from('regions')
-            .update({ tax_treasury: currentTax + taxDeduction })
-            .eq('id', targetRegion);
-          
-          if (updateTaxError) {
-             console.error("Error updating tax treasury:", updateTaxError);
-          } else {
-             console.log(`TAX UPDATED: +${taxDeduction} to ${targetRegion} Treasury. New: ${currentTax + taxDeduction}`);
-          }
-        }
-      } catch (taxErr) {
-        console.error("Tax Update Exception:", taxErr);
+        if (userError) throw userError;
+        console.warn("Manual balance update succeeded, but Treasury update failed. Verify SQL Function exists.");
+      } else {
+        console.log(`CLAIM SUCCESS: User +${userNetYield.toFixed(2)} | Treasury +${taxAmount.toFixed(2)} (${targetRegion})`);
       }
 
       onClaimSuccess(newResources);
     } catch (err) {
       console.error("Mining Sync Failure:", err);
-      alert("Mining Interrupted: Registry sync refused. Please ensure the SQL script is run and the region is set correctly.");
+      alert("Mining Interrupted: Connection to Imperial Treasury unstable.");
     }
     setLoading(false);
   };
