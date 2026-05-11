@@ -20,7 +20,8 @@ export default function RankingPage() {
   const [rankings, setRankings] = useState<any[]>([]);
   const [userData, setUserData] = useState<any>(null);
   const [userEmpire, setUserEmpire] = useState<string | null>(null);
-  const [telegramId, setTelegramId] = useState<number | null>(null);
+  const [telegramId, setTelegramId] = useState<number | string | null>(null);
+  const [lastRefreshed, setLastRefreshed] = useState<number | null>(null);
 
   useEffect(() => {
     async function fetchData() {
@@ -49,8 +50,24 @@ export default function RankingPage() {
   }, []);
 
   useEffect(() => {
-    // Only fetch if initial data (like user info) is loaded
-    // We don't include 'loading' here to avoid infinite loops since fetchRankings sets loading=true
+    // Attempt to load from cache first
+    const cacheKey = `rankings-${activeTab}-${empireSubTab}-${individualSubTab}-${individualSort}`;
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      try {
+        const { data, timestamp } = JSON.parse(cached);
+        const oneHour = 60 * 60 * 1000;
+        if (Date.now() - timestamp < oneHour) {
+          setRankings(data);
+          setLastRefreshed(timestamp);
+          setLoading(false);
+          return;
+        }
+      } catch (err) {
+        console.error("Cache read error:", err);
+      }
+    }
+    
     fetchRankings();
   }, [activeTab, empireSubTab, individualSubTab, individualSort]);
 
@@ -58,7 +75,7 @@ export default function RankingPage() {
     setLoading(true);
     try {
       if (activeTab === 'empire') {
-        // Fetch Regions - use regions table directly as regional_stats might not exist
+        // Fetch Regions
         const { data: regions, error: regError } = await supabase.from('regions').select('*');
         if (regError) {
           console.error("Error fetching regions:", regError);
@@ -67,9 +84,7 @@ export default function RankingPage() {
         }
 
         if (empireSubTab === 'population') {
-          // Since regional_stats might be missing, we can try to estimate from users table or use a fallback
-          // For now, let's try to aggregate from users grouped by region
-          const { data: userCounts } = await supabase.from('users').select('region');
+          const { data: userCounts } = await supabase.from('users').select('region').not('region', 'is', null);
           const counts: Record<string, number> = {};
           userCounts?.forEach(u => { if(u.region) counts[u.region] = (counts[u.region] || 0) + 1 });
           
@@ -77,9 +92,10 @@ export default function RankingPage() {
             name: r.name,
             value: Number(counts[r.id] || 0)
           })).sort((a, b) => b.value - a.value);
+          
+          saveToCache(sorted);
           setRankings(sorted);
         } else if (empireSubTab === 'economic') {
-          // Dashboard Logic: Max(1, (Circulation / TON)) * population * 0.01
           const { data: stats } = await supabase.from('regional_stats').select('*');
           
           const sorted = (regions || []).map(r => {
@@ -94,13 +110,20 @@ export default function RankingPage() {
             
             return { name: r.name, value: finalPrice };
           }).sort((a, b) => b.value - a.value);
+          
+          saveToCache(sorted);
           setRankings(sorted);
         } else {
-          setRankings([]); // Military Coming Soon
+          setRankings([]);
         }
       } else {
         // Individual
-        const { data: users, error: userError } = await supabase.from('users').select('username, telegram_id, rank, region, empire_name, photo_url');
+        // Reality Hack: Only show users who have a region (real people who finished registration)
+        const { data: users, error: userError } = await supabase
+          .from('users')
+          .select('username, telegram_id, rank, region, empire_name, photo_url')
+          .not('region', 'is', null);
+
         const { data: milStats, error: milError } = await supabase.from('military_stats').select('telegram_id, attack, defense');
         const { data: resData } = await supabase.from('user_resources').select('telegram_id, total_ton_deposited');
 
@@ -109,14 +132,12 @@ export default function RankingPage() {
 
         if (users) {
           const processed = users
-            .filter((u: any) => u.telegram_id) // Filter out broken/empty records
+            .filter((u: any) => u.telegram_id)
             .map((u: any) => {
-              const mil = milStats?.find(ms => ms.telegram_id === u.telegram_id) || { attack: 100, defense: 100 };
-              const res = resData?.find(r => r.telegram_id === u.telegram_id);
+              const mil = milStats?.find(ms => String(ms.telegram_id) === String(u.telegram_id)) || { attack: 100, defense: 100 };
+              const res = resData?.find(r => String(r.telegram_id) === String(u.telegram_id));
               
-              // Calculate VIP bonus similarly to military page for "Real" feel
               const tonDeposited = res?.total_ton_deposited || 0;
-              // Assuming roughly 100 points per 0.1 TON or similar logic for variety
               const estimatedVipPoints = Math.floor(tonDeposited * 1000); 
               
               const getVipBonus = (points: number) => {
@@ -132,10 +153,13 @@ export default function RankingPage() {
               };
 
               const bonus = getVipBonus(estimatedVipPoints);
-              const finalAtk = Math.floor((mil.attack || 100) * bonus.atk);
-              const finalDef = Math.floor((mil.defense || 100) * bonus.def);
               
-              // Ensure rank is a number
+              // Correct logic: At least 100 for each, then apply bonus
+              const baseAtk = Number(mil.attack || 100);
+              const baseDef = Number(mil.defense || 100);
+              const finalAtk = Math.floor(baseAtk * bonus.atk);
+              const finalDef = Math.floor(baseDef * bonus.def);
+              
               let rVal = 1;
               if (u.rank) {
                 const parsed = parseInt(u.rank.toString());
@@ -146,7 +170,7 @@ export default function RankingPage() {
                 username: u.username 
                   ? (u.username.startsWith('@') ? u.username : `@${u.username}`) 
                   : `Citizen_${u.telegram_id.toString().slice(-4)}`,
-                telegramId: u.telegram_id,
+                telegramId: String(u.telegram_id),
                 rankValue: rVal,
                 photoUrl: u.photo_url,
                 militaryStrength: finalAtk + finalDef,
@@ -165,6 +189,7 @@ export default function RankingPage() {
             return b.rankValue - a.rankValue;
           });
 
+          saveToCache(sorted);
           setRankings(sorted);
         }
       }
@@ -175,8 +200,18 @@ export default function RankingPage() {
     }
   }
 
+  function saveToCache(data: any[]) {
+    const cacheKey = `rankings-${activeTab}-${empireSubTab}-${individualSubTab}-${individualSort}`;
+    localStorage.setItem(cacheKey, JSON.stringify({
+      data,
+      timestamp: Date.now()
+    }));
+    setLastRefreshed(Date.now());
+  }
+
+
   const renderRankItem = (item: any, index: number) => {
-    const isUser = item.telegramId === telegramId;
+    const isUser = String(item.telegramId) === String(telegramId);
     
     // Safety checks for value display to prevent "Page cannot be loaded" crashes
     let valueDisplay = 'N/A';
@@ -281,7 +316,9 @@ export default function RankingPage() {
           </Link>
           <div className="text-right">
             <h1 className="text-[10px] font-black uppercase tracking-[0.3em] text-accent-cyan">Imperial Registry</h1>
-            <span className="text-[8px] font-mono text-zinc-500 uppercase">Synchronizing Rankings...</span>
+            <span className="text-[8px] font-mono text-zinc-500 uppercase">
+              {lastRefreshed ? `Updated ${new Date(lastRefreshed).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Synchronizing...'}
+            </span>
           </div>
         </div>
 
@@ -387,7 +424,9 @@ export default function RankingPage() {
               <div className="flex flex-col">
                 <span className="text-[8px] font-black text-black/60 uppercase leading-none">Your Status</span>
                 <span className="text-xs font-black text-black uppercase tracking-tight italic">
-                  {rankings.findIndex(r => r.telegramId === telegramId) + 1 || '--'} TH IN REGISTRY
+                  {rankings.findIndex(r => String(r.telegramId) === String(telegramId)) !== -1 
+                    ? `${rankings.findIndex(r => String(r.telegramId) === String(telegramId)) + 1} TH IN REGISTRY`
+                    : 'OUTSIDE TOP TIERS'}
                 </span>
               </div>
             </div>
