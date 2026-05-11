@@ -51,7 +51,8 @@ export default function RankingPage() {
 
   useEffect(() => {
     // Attempt to load from cache first
-    const cacheKey = `rankings-${activeTab}-${empireSubTab}-${individualSubTab}-${individualSort}`;
+    const cacheVersion = 'v3'; // Incrementing version to force refresh bad data
+    const cacheKey = `rankings-${cacheVersion}-${activeTab}-${empireSubTab}-${individualSubTab}-${individualSort}`;
     const cached = localStorage.getItem(cacheKey);
     if (cached) {
       try {
@@ -147,8 +148,10 @@ export default function RankingPage() {
                 if (points >= 32000) return { atk: 1.08, def: 1.02 };
                 if (points >= 16000) return { atk: 1.04, def: 1.01 };
                 if (points >= 8000) return { atk: 1.03, def: 1.00 };
+                if (points >= 6000) return { atk: 1.025, def: 1.00 };
                 if (points >= 4000) return { atk: 1.02, def: 1.00 };
                 if (points >= 2000) return { atk: 1.01, def: 1.00 };
+                if (points >= 1000) return { atk: 1.005, def: 1.00 };
                 return { atk: 1.00, def: 1.00 };
               };
 
@@ -201,7 +204,8 @@ export default function RankingPage() {
   }
 
   function saveToCache(data: any[]) {
-    const cacheKey = `rankings-${activeTab}-${empireSubTab}-${individualSubTab}-${individualSort}`;
+    const cacheVersion = 'v3';
+    const cacheKey = `rankings-${cacheVersion}-${activeTab}-${empireSubTab}-${individualSubTab}-${individualSort}`;
     localStorage.setItem(cacheKey, JSON.stringify({
       data,
       timestamp: Date.now()
@@ -426,14 +430,21 @@ export default function RankingPage() {
                 <span className="text-xs font-black text-black uppercase tracking-tight italic">
                   {rankings.findIndex(r => String(r.telegramId) === String(telegramId)) !== -1 
                     ? `${rankings.findIndex(r => String(r.telegramId) === String(telegramId)) + 1} TH IN REGISTRY`
-                    : 'OUTSIDE TOP TIERS'}
+                    : 'RECORDING...'}
                 </span>
+                {rankings.find(r => String(r.telegramId) === String(telegramId)) && (
+                  <span className="text-[7px] font-mono text-black/50 uppercase mt-0.5">
+                    {individualSort === 'military' ? 'POWER' : 'LEVEL'}: {individualSort === 'military' 
+                      ? rankings.find(r => String(r.telegramId) === String(telegramId))?.militaryStrength 
+                      : rankings.find(r => String(r.telegramId) === String(telegramId))?.rankValue}
+                  </span>
+                )}
               </div>
             </div>
             <div className="h-8 w-[1px] bg-black/10" />
             <div className="text-right">
-              <div className="text-[10px] font-black text-black">TOP TIERS</div>
-              <div className="text-[7px] text-black/60 uppercase font-mono">Registry Phase 1.0</div>
+              <div className="text-[10px] font-black text-black">REGISTRY STATUS</div>
+              <div className="text-[7px] text-black/60 uppercase font-mono">Real-time sync</div>
             </div>
           </div>
         </div>

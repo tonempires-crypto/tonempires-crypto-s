@@ -93,8 +93,10 @@ export default function MilitaryCampPage() {
     if (points >= 32000) return { atk: 1.08, def: 1.02, level: 7 };
     if (points >= 16000) return { atk: 1.04, def: 1.01, level: 6 };
     if (points >= 8000) return { atk: 1.03, def: 1.00, level: 5 };
+    if (points >= 6000) return { atk: 1.025, def: 1.00, level: 4 };
     if (points >= 4000) return { atk: 1.02, def: 1.00, level: 3 };
     if (points >= 2000) return { atk: 1.01, def: 1.00, level: 2 };
+    if (points >= 1000) return { atk: 1.005, def: 1.00, level: 1 };
     return { atk: 1.00, def: 1.00, level: 0 };
   };
 

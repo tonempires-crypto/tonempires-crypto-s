@@ -82,6 +82,7 @@ export default function AppearancePage() {
     if (pts >= 32000) return 7;
     if (pts >= 16000) return 6;
     if (pts >= 8000) return 5;
+    if (pts >= 6000) return 4;
     if (pts >= 4000) return 3;
     if (pts >= 2000) return 2;
     if (pts >= 1000) return 1;

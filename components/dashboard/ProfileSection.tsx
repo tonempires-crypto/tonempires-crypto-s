@@ -23,17 +23,17 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
 
   // VIP Level Definitions
   const VIP_LEVELS = [
-    { level: 0, min: 0, name: 'Citizen', color: 'text-zinc-500', bg: 'bg-zinc-500', privileges: ['Base Mining Rate', 'Standard Access'] },
-    { level: 1, min: 1000, name: 'Green Member', color: 'text-emerald-400', bg: 'bg-emerald-400', privileges: ['Base Mining Rate', 'Standard Access'] },
-    { level: 2, min: 2000, name: 'Green Elite', color: 'text-emerald-400', bg: 'bg-emerald-400', privileges: ['ATK +1%', 'Standard Access'] },
-    { level: 3, min: 4000, name: 'Noble Green', color: 'text-emerald-500', bg: 'bg-emerald-500', privileges: ['ATK +2%', 'Standard Access'] },
-    { level: 4, min: 8000, name: 'Blue Initiate', color: 'text-blue-400', bg: 'bg-blue-400', privileges: ['ATK +3%', 'Standard Access'] },
-    { level: 5, min: 16000, name: 'Executive Blue', color: 'text-blue-500', bg: 'bg-blue-500', privileges: ['ATK +4%', 'DEF +1%'] },
-    { level: 6, min: 32000, name: 'Sovereign Blue', color: 'text-blue-600', bg: 'bg-blue-600', privileges: ['ATK +8%', 'DEF +2%', 'Priority Support'] },
-    { level: 7, min: 64000, name: 'Advanced Red', color: 'text-red-500', bg: 'bg-red-500', privileges: ['ATK +12%', 'DEF +4%', 'Elite Badge'] },
-    { level: 8, min: 120000, name: 'Elite Red', color: 'text-red-600', bg: 'bg-red-600', privileges: ['ATK +20%', 'DEF +10%', 'Imperial Advisor'] },
-    { level: 9, min: 240000, name: 'Luxurious Gold', color: 'text-yellow-400', bg: 'bg-yellow-400', privileges: ['ATK +30%', 'DEF +20%', 'Gold Border'] },
-    { level: 10, min: 500000, name: 'Imperial Legend', color: 'text-yellow-500', bg: 'bg-yellow-500', privileges: ['ATK +50%', 'DEF +30%', 'Ultimate Status'] }
+    { level: 0, min: 0, name: 'Basic Citizen', color: 'text-zinc-500', bg: 'bg-zinc-500', privileges: ['No active bonuses'], atk: 1.0, def: 1.0 },
+    { level: 1, min: 1000, name: 'Tier 1', color: 'text-emerald-400', bg: 'bg-emerald-400', privileges: ['Attack +0.5%'], atk: 1.005, def: 1.0 },
+    { level: 2, min: 2000, name: 'Tier 2', color: 'text-emerald-400', bg: 'bg-emerald-400', privileges: ['Attack +1%'], atk: 1.01, def: 1.0 },
+    { level: 3, min: 4000, name: 'Tier 3', color: 'text-emerald-500', bg: 'bg-emerald-500', privileges: ['Attack +2%'], atk: 1.02, def: 1.0 },
+    { level: 4, min: 6000, name: 'Tier 4', color: 'text-blue-400', bg: 'bg-blue-400', privileges: ['Attack +2.5%'], atk: 1.025, def: 1.0 },
+    { level: 5, min: 8000, name: 'Tier 5', color: 'text-blue-500', bg: 'bg-blue-500', privileges: ['Attack +3%'], atk: 1.03, def: 1.0 },
+    { level: 6, min: 16000, name: 'Tier 6', color: 'text-blue-600', bg: 'bg-blue-600', privileges: ['Attack +4%', 'Defense +1%'], atk: 1.04, def: 1.01 },
+    { level: 7, min: 32000, name: 'Tier 7', color: 'text-red-500', bg: 'bg-red-500', privileges: ['Attack +8%', 'Defense +2%'], atk: 1.08, def: 1.02 },
+    { level: 8, min: 64000, name: 'Tier 8', color: 'text-red-600', bg: 'bg-red-600', privileges: ['Attack +12%', 'Defense +4%'], atk: 1.12, def: 1.04 },
+    { level: 9, min: 120000, name: 'Tier 9', color: 'text-yellow-400', bg: 'bg-yellow-400', privileges: ['Attack +20%', 'Defense +10%'], atk: 1.20, def: 1.10 },
+    { level: 10, min: 240000, name: 'Tier 10', color: 'text-yellow-500', bg: 'bg-yellow-500', privileges: ['Attack +30%', 'Defense +20%'], atk: 1.30, def: 1.20 }
   ];
 
   const getVipInfo = (points: number) => {
@@ -376,7 +376,7 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
                  <ul className="space-y-0.5">
                    {vipInfo.current.privileges.map((p, i) => (
                      <li key={i} className="text-[8px] font-bold text-emerald-400 flex items-center gap-1">
-                       <Shield className="w-2 h-2 shrink-0" /> {p}
+                       {p.includes('ATK') || p.includes('DEF') ? <Sword className="w-2 h-2 shrink-0" /> : <Shield className="w-2 h-2 shrink-0" />} {p}
                      </li>
                    ))}
                  </ul>
