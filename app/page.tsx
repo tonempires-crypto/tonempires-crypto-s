@@ -502,7 +502,11 @@ export default function Dashboard() {
             onTradeSuccess={(newRes) => setResources(newRes)}
           />
         ) : activeTab === 'tasks' ? (
-          <TasksSection />
+          <TasksSection 
+            userData={userData}
+            resources={resources}
+            onResourcesUpdate={(newRes: any) => setResources(newRes)}
+          />
         ) : activeTab === 'invite' ? (
           <ReferralSection userId={fullUserId} />
         ) : activeTab === 'profile' ? (
