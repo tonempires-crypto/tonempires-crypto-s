@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Settings, Globe, Volume2, VolumeX, ChevronRight, Volume1 } from 'lucide-react';
+import { Settings, Globe, Volume2, VolumeX, ChevronRight, Volume1, BookOpen } from 'lucide-react';
 import { useAudio } from '@/components/providers/AudioProvider';
+import Link from 'next/link';
 
 export default function SettingsMenu() {
   const [isOpen, setIsOpen] = useState(false);
@@ -101,6 +102,24 @@ export default function SettingsMenu() {
                     </div>
                   )}
                 </div>
+
+                {/* White Paper Link */}
+                <Link 
+                  href="/whitepaper"
+                  onClick={() => setIsOpen(false)}
+                  className="p-3 bg-zinc-800/50 border border-white/5 rounded-xl flex items-center justify-between group hover:border-accent-cyan/30 transition-all active:scale-95"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-zinc-900 rounded-lg text-accent-cyan group-hover:bg-accent-cyan/10 transition-colors">
+                      <BookOpen className="w-4 h-4" />
+                    </div>
+                    <div className="flex flex-col text-left">
+                      <span className="text-[10px] font-bold text-zinc-400 group-hover:text-accent-cyan/70 transition-colors">PROJECT INTEL</span>
+                      <span className="text-[12px] font-black text-white">WHITE PAPER</span>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-zinc-600 group-hover:text-accent-cyan" />
+                </Link>
 
                 <div className="pt-2 text-center">
                   <span className="text-[8px] font-mono text-zinc-600 uppercase tracking-widest">Protocol v1.0.4 - Secure Connection</span>

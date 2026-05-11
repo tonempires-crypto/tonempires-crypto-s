@@ -32,22 +32,22 @@ interface TasksSectionProps {
 
 const DAILY_TASKS = [
   { id: 'retweet_x', title: 'Retweet latest tweet on X', reward: '5 WHT', platform: 'X', icon: Twitter, link: 'https://x.com/Ton_Empires' },
-  { id: 'react_tg', title: 'React the latest post on Telegram', reward: '5 WHT', platform: 'Telegram', icon: Send, link: 'https://t.me/Ton_Empires' },
+  { id: 'react_tg', title: 'React the latest post on Telegram', reward: '5 WHT', platform: 'Telegram', icon: Send, link: 'https://t.me/T0NEmpires' },
   { id: 'react_tiktok', title: 'React the latest post on TikTok', reward: '5 WHT', platform: 'TikTok', icon: Video, link: 'https://www.tiktok.com/@tonempires' },
   { id: 'repost_insta', title: 'Repost the latest post on Instagram', reward: '5 WHT', platform: 'Instagram', icon: Instagram, link: 'https://www.instagram.com/tonempires/' },
   { id: 'react_fb', title: 'React the latest Facebook post', reward: '5 WHT', platform: 'Facebook', icon: Facebook, link: 'https://www.facebook.com/profile.php?id=61589243985940' },
-  { id: 'react_wa', title: 'React the latest WhatsApp post', reward: '5 WHT', platform: 'WhatsApp', icon: MessageSquare, link: '#' },
+  { id: 'react_wa', title: 'React the latest WhatsApp post', reward: '5 WHT', platform: 'WhatsApp', icon: MessageSquare, link: 'https://whatsapp.com/channel/0029Vb7cgucKrWQmo5dq8J2V' },
 ];
 
 const ONE_TIME_TASKS = [
   { id: 'follow_x', title: 'Follow X', reward: '10 ALL', platform: 'X', icon: Twitter, link: 'https://x.com/Ton_Empires' },
-  { id: 'follow_tg', title: 'Follow Telegram', reward: '10 ALL', platform: 'Telegram', icon: Send, link: '#' },
+  { id: 'follow_tg', title: 'Follow Telegram', reward: '10 ALL', platform: 'Telegram', icon: Send, link: 'https://t.me/T0NEmpires' },
   { id: 'follow_tiktok', title: 'Follow TikTok', reward: '10 ALL', platform: 'TikTok', icon: Video, link: 'https://www.tiktok.com/@tonempires' },
   { id: 'follow_youtube', title: 'Follow YouTube', reward: '10 ALL', platform: 'YouTube', icon: Youtube, link: 'https://www.youtube.com/@TonEmpires' },
   { id: 'follow_insta', title: 'Follow Instagram', reward: '10 ALL', platform: 'Instagram', icon: Instagram, link: 'https://www.instagram.com/tonempires/' },
   { id: 'follow_fb', title: 'Follow Facebook', reward: '10 ALL', platform: 'Facebook', icon: Facebook, link: 'https://www.facebook.com/profile.php?id=61589243985940' },
-  { id: 'follow_wa', title: 'Follow WhatsApp', reward: '10 ALL', platform: 'WhatsApp', icon: MessageSquare, link: '#' },
-  { id: 'join_discord', title: 'Join Discord', reward: '10 ALL', platform: 'Discord', icon: Hash, link: '#' },
+  { id: 'follow_wa', title: 'Follow WhatsApp', reward: '10 ALL', platform: 'WhatsApp', icon: MessageSquare, link: 'https://whatsapp.com/channel/0029Vb7cgucKrWQmo5dq8J2V' },
+  { id: 'join_discord', title: 'Join Discord', reward: '10 ALL', platform: 'Discord', icon: Hash, link: 'https://discord.gg/KH2mzsCAD' },
 ];
 
 export default function TasksSection({ userData, resources, onResourcesUpdate }: TasksSectionProps) {

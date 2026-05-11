@@ -16,6 +16,7 @@ import RegionEconomySection from '@/components/dashboard/RegionEconomySection';
 import GovernmentSection from '@/components/dashboard/GovernmentSection';
 import CompaniesSection from '@/components/dashboard/CompaniesSection';
 import SettingsMenu from '@/components/dashboard/SettingsMenu';
+import WorldSVGMap from '@/components/dashboard/WorldSVGMap';
 
 export default function Dashboard() {
   const [userName, setUserName] = useState('jdoe_trading');
@@ -474,23 +475,19 @@ export default function Dashboard() {
                   Regional Intel
                 </button>
               </div>
-              <button 
-                onClick={() => { setActiveTab('economy'); triggerHaptic(); }}
-                className="grid grid-cols-5 gap-1.5 h-16 w-full group active:scale-[0.98] transition-all"
-              >
-                {regionalMarketData.map((region, i) => (
-                  <div 
-                    key={region.id}
-                    className={`rounded-lg border flex items-center justify-center text-[9px] font-bold transition-all
-                      ${region.id === (userData?.region) 
-                        ? 'bg-accent-cyan/10 border-accent-cyan/40 text-accent-cyan shadow-[0_0_10px_rgba(0,255,209,0.2)]' 
-                        : 'bg-[#151518] border-border-secondary text-gray-600'
-                      }`}
-                  >
-                    {region.currency}
-                  </div>
-                ))}
-              </button>
+              <WorldSVGMap 
+                selectedRegion={userData?.region} 
+                onRegionSelect={(id) => {
+                  if (id === userData?.region) {
+                    setActiveTab('economy');
+                  } else {
+                    // Logic for switching view maybe? 
+                    // For now, let's just navigate to economy if it's the current region
+                    setActiveTab('economy');
+                  }
+                  triggerHaptic();
+                }}
+              />
             </section>
           </>
         ) : activeTab === 'market' ? (

@@ -1,453 +1,249 @@
 'use client';
 
-import { motion, AnimatePresence } from 'motion/react';
-import { ArrowLeft, Trophy, Users, TrendingUp, Shield, Sword, Globe, Home, Loader2, Crown, Zap } from 'lucide-react';
+import { motion } from 'motion/react';
+import { ArrowLeft, Trophy, Users, Shield, Sword, Loader2, Zap, Crown, Star } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
 
-type RankingType = 'empire' | 'individual';
-type EmpireSubTab = 'economic' | 'population' | 'military';
-type IndividualSubTab = 'global' | 'internal';
-
 export default function RankingPage() {
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<RankingType>('individual');
-  const [empireSubTab, setEmpireSubTab] = useState<EmpireSubTab>('population');
-  const [individualSubTab, setIndividualSubTab] = useState<IndividualSubTab>('global');
-  const [individualSort, setIndividualSort] = useState<'military' | 'rank'>('military');
-
   const [rankings, setRankings] = useState<any[]>([]);
-  const [userData, setUserData] = useState<any>(null);
-  const [userEmpire, setUserEmpire] = useState<string | null>(null);
+  const [myRankInfo, setMyRankInfo] = useState<any>(null);
   const [telegramId, setTelegramId] = useState<number | string | null>(null);
-  const [lastRefreshed, setLastRefreshed] = useState<number | null>(null);
 
   useEffect(() => {
-    async function fetchData() {
-      try {
-        // @ts-ignore
-        const tg = window.Telegram?.WebApp;
-        let user = tg?.initDataUnsafe?.user;
-        if (!user && process.env.NODE_ENV === 'development') user = { id: 1492586846 };
+    async function init() {
+      // @ts-ignore
+      const tg = window.Telegram?.WebApp;
+      let user = tg?.initDataUnsafe?.user;
+      if (!user && process.env.NODE_ENV === 'development') user = { id: 1492586846 };
 
-        if (user) {
-          setTelegramId(user.id);
-          const { data: uData, error } = await supabase.from('users').select('*').eq('telegram_id', user.id).maybeSingle();
-          if (error) console.error("Error fetching user data:", error);
-          if (uData) {
-            setUserData(uData);
-            setUserEmpire(uData.empire_name);
-          }
-        }
-      } catch (e) {
-        console.error("Initialization error:", e);
-      } finally {
-        setLoading(false);
+      if (user) {
+        setTelegramId(user.id);
       }
+      fetchCombatRanking(user?.id);
     }
-    fetchData();
+    init();
   }, []);
 
-  useEffect(() => {
-    // Attempt to load from cache first
-    const cacheVersion = 'v3'; // Incrementing version to force refresh bad data
-    const cacheKey = `rankings-${cacheVersion}-${activeTab}-${empireSubTab}-${individualSubTab}-${individualSort}`;
-    const cached = localStorage.getItem(cacheKey);
-    if (cached) {
-      try {
-        const { data, timestamp } = JSON.parse(cached);
-        const oneHour = 60 * 60 * 1000;
-        if (Date.now() - timestamp < oneHour) {
-          setRankings(data);
-          setLastRefreshed(timestamp);
-          setLoading(false);
-          return;
-        }
-      } catch (err) {
-        console.error("Cache read error:", err);
-      }
-    }
-    
-    fetchRankings();
-  }, [activeTab, empireSubTab, individualSubTab, individualSort]);
+  const getVipBonus = (points: number) => {
+    if (points >= 240000) return { atk: 1.30, def: 1.20 };
+    if (points >= 120000) return { atk: 1.20, def: 1.10 };
+    if (points >= 64000) return { atk: 1.12, def: 1.04 };
+    if (points >= 32000) return { atk: 1.08, def: 1.02 };
+    if (points >= 16000) return { atk: 1.04, def: 1.01 };
+    if (points >= 8000) return { atk: 1.03, def: 1.00 };
+    if (points >= 6000) return { atk: 1.025, def: 1.00 };
+    if (points >= 4000) return { atk: 1.02, def: 1.00 };
+    if (points >= 2000) return { atk: 1.01, def: 1.00 };
+    if (points >= 1000) return { atk: 1.005, def: 1.00 };
+    return { atk: 1.00, def: 1.00 };
+  };
 
-  async function fetchRankings() {
+  async function fetchCombatRanking(currentUserId?: number | string) {
     setLoading(true);
     try {
-      if (activeTab === 'empire') {
-        // Fetch Regions
-        const { data: regions, error: regError } = await supabase.from('regions').select('*');
-        if (regError) {
-          console.error("Error fetching regions:", regError);
-          setRankings([]);
-          return;
+      // 1. Fetch Real Users (No fake accounts - must have username and region)
+      const { data: users, error: userError } = await supabase
+        .from('users')
+        .select('username, telegram_id, photo_url, region, referred_by')
+        .not('username', 'is', null)
+        .not('region', 'is', null);
+
+      if (userError) throw userError;
+
+      // 2. Fetch Military Stats
+      const { data: milStats } = await supabase.from('military_stats').select('*');
+
+      // 3. Fetch Resources (for VIP calculation)
+      const { data: resData } = await supabase.from('user_resources').select('telegram_id, total_ton_deposited');
+
+      if (!users) return;
+
+      // 4. Calculate Referral counts for VIP points
+      const referralMap: Record<string, number> = {};
+      users.forEach(u => {
+        if (u.referred_by) {
+          referralMap[String(u.referred_by)] = (referralMap[String(u.referred_by)] || 0) + 1;
         }
+      });
 
-        if (empireSubTab === 'population') {
-          const { data: userCounts } = await supabase.from('users').select('region').not('region', 'is', null);
-          const counts: Record<string, number> = {};
-          userCounts?.forEach(u => { if(u.region) counts[u.region] = (counts[u.region] || 0) + 1 });
-          
-          const sorted = (regions || []).map(r => ({
-            name: r.name,
-            value: Number(counts[r.id] || 0)
-          })).sort((a, b) => b.value - a.value);
-          
-          saveToCache(sorted);
-          setRankings(sorted);
-        } else if (empireSubTab === 'economic') {
-          const { data: stats } = await supabase.from('regional_stats').select('*');
-          
-          const sorted = (regions || []).map(r => {
-            const s = stats?.find(stat => stat.region === r.id);
-            const pop = s?.population || 0;
-            const circ = s?.total_circulation || 0;
-            const ton = r.total_ton_deposited || 0;
-            
-            const rawPrice = ton > 0 ? circ / ton : 1;
-            const basePrice = Math.max(1, rawPrice);
-            const finalPrice = basePrice * pop * 0.01;
-            
-            return { name: r.name, value: finalPrice };
-          }).sort((a, b) => b.value - a.value);
-          
-          saveToCache(sorted);
-          setRankings(sorted);
-        } else {
-          setRankings([]);
-        }
-      } else {
-        // Individual
-        // Reality Hack: Only show users who have a region (real people who finished registration)
-        const { data: users, error: userError } = await supabase
-          .from('users')
-          .select('username, telegram_id, rank, region, empire_name, photo_url')
-          .not('region', 'is', null);
+      // 5. Build Combined Ranking with Combat Power
+      const processed = users.map(u => {
+        const stats = milStats?.find(ms => String(ms.telegram_id) === String(u.telegram_id)) || { attack: 100, defense: 100 };
+        const res = resData?.find(r => String(r.telegram_id) === String(u.telegram_id)) || { total_ton_deposited: 0 };
+        
+        const refCount = referralMap[String(u.telegram_id)] || 0;
+        const vipPoints = (refCount * 100) + Math.floor((res.total_ton_deposited || 0) * 1000);
+        const bonus = getVipBonus(vipPoints);
 
-        const { data: milStats, error: milError } = await supabase.from('military_stats').select('telegram_id, attack, defense');
-        const { data: resData } = await supabase.from('user_resources').select('telegram_id, total_ton_deposited');
+        const totalAtk = Math.floor((stats.attack || 100) * bonus.atk);
+        const totalDef = Math.floor((stats.defense || 100) * bonus.def);
+        const cp = totalAtk + totalDef;
 
-        if (userError) console.error("Error fetching users for ranking:", userError);
-        if (milError) console.error("Error fetching military stats for ranking:", milError);
+        return {
+          id: String(u.telegram_id),
+          username: u.username.startsWith('@') ? u.username : `@${u.username}`,
+          photoUrl: u.photo_url,
+          region: u.region,
+          cp: cp,
+        };
+      });
 
-        if (users) {
-          const processed = users
-            .filter((u: any) => u.telegram_id)
-            .map((u: any) => {
-              const mil = milStats?.find(ms => String(ms.telegram_id) === String(u.telegram_id)) || { attack: 100, defense: 100 };
-              const res = resData?.find(r => String(r.telegram_id) === String(u.telegram_id));
-              
-              const tonDeposited = res?.total_ton_deposited || 0;
-              const estimatedVipPoints = Math.floor(tonDeposited * 1000); 
-              
-              const getVipBonus = (points: number) => {
-                if (points >= 240000) return { atk: 1.30, def: 1.20 };
-                if (points >= 120000) return { atk: 1.20, def: 1.10 };
-                if (points >= 64000) return { atk: 1.12, def: 1.04 };
-                if (points >= 32000) return { atk: 1.08, def: 1.02 };
-                if (points >= 16000) return { atk: 1.04, def: 1.01 };
-                if (points >= 8000) return { atk: 1.03, def: 1.00 };
-                if (points >= 6000) return { atk: 1.025, def: 1.00 };
-                if (points >= 4000) return { atk: 1.02, def: 1.00 };
-                if (points >= 2000) return { atk: 1.01, def: 1.00 };
-                if (points >= 1000) return { atk: 1.005, def: 1.00 };
-                return { atk: 1.00, def: 1.00 };
-              };
+      // 6. Sort by Combat Power
+      const sorted = processed.sort((a, b) => b.cp - a.cp);
 
-              const bonus = getVipBonus(estimatedVipPoints);
-              
-              // Correct logic: At least 100 for each, then apply bonus
-              const baseAtk = Number(mil.attack || 100);
-              const baseDef = Number(mil.defense || 100);
-              const finalAtk = Math.floor(baseAtk * bonus.atk);
-              const finalDef = Math.floor(baseDef * bonus.def);
-              
-              let rVal = 1;
-              if (u.rank) {
-                const parsed = parseInt(u.rank.toString());
-                if (!isNaN(parsed)) rVal = parsed;
-              }
-
-              return {
-                username: u.username 
-                  ? (u.username.startsWith('@') ? u.username : `@${u.username}`) 
-                  : `Citizen_${u.telegram_id.toString().slice(-4)}`,
-                telegramId: String(u.telegram_id),
-                rankValue: rVal,
-                photoUrl: u.photo_url,
-                militaryStrength: finalAtk + finalDef,
-                empire: u.empire_name || u.region?.toUpperCase().replace('_', ' ') || 'UNALIGNED'
-              };
-            });
-
-          let filtered = processed;
-          const targetEmpire = userEmpire || userData?.region?.toUpperCase().replace('_', ' ');
-          if (individualSubTab === 'internal' && targetEmpire) {
-            filtered = processed.filter(u => u.empire === targetEmpire);
-          }
-
-          const sorted = filtered.sort((a: any, b: any) => {
-            if (individualSort === 'military') return b.militaryStrength - a.militaryStrength;
-            return b.rankValue - a.rankValue;
-          });
-
-          saveToCache(sorted);
-          setRankings(sorted);
+      // 7. Find My Rank
+      if (currentUserId) {
+        const myIdx = sorted.findIndex(item => String(item.id) === String(currentUserId));
+        if (myIdx !== -1) {
+          setMyRankInfo({ ...sorted[myIdx], rankNum: myIdx + 1 });
         }
       }
+
+      setRankings(sorted);
     } catch (e) {
-      console.error("Fetch rankings main error:", e);
+      console.error("Combat Ranking Error:", e);
     } finally {
       setLoading(false);
     }
   }
 
-  function saveToCache(data: any[]) {
-    const cacheVersion = 'v3';
-    const cacheKey = `rankings-${cacheVersion}-${activeTab}-${empireSubTab}-${individualSubTab}-${individualSort}`;
-    localStorage.setItem(cacheKey, JSON.stringify({
-      data,
-      timestamp: Date.now()
-    }));
-    setLastRefreshed(Date.now());
-  }
-
-
-  const renderRankItem = (item: any, index: number) => {
-    const isUser = String(item.telegramId) === String(telegramId);
+  const renderRankItem = (item: any, index: number, isStickyUser = false) => {
+    const isUser = String(item.id) === String(telegramId) && !isStickyUser;
     
-    // Safety checks for value display to prevent "Page cannot be loaded" crashes
-    let valueDisplay = 'N/A';
-    try {
-      if (activeTab === 'empire') {
-        if (empireSubTab === 'population') {
-          const val = Number(item.value || 0);
-          valueDisplay = `${val.toLocaleString()} UNITS`;
-        } else {
-          const val = Number(item.value || 0);
-          valueDisplay = `RATE ${val.toFixed(4)}`;
-        }
-      } else {
-        if (individualSort === 'military') {
-          const val = Number(item.militaryStrength || 0);
-          valueDisplay = val.toLocaleString();
-        } else {
-          const val = item.rankValue || 1;
-          valueDisplay = `RANK ${val}`;
-        }
-      }
-    } catch (err) {
-      console.warn("Display error for item", item, err);
-    }
-    
-    const subtitleDisplay = activeTab === 'empire'
-      ? (empireSubTab === 'population' ? 'ACTIVE POPULATION' : 'CURRENCY RATE')
-      : (individualSort === 'military' ? 'TOTAL COMBAT POWER' : 'SOVEREIGN STATUS');
-
     return (
       <motion.div
-        initial={{ opacity: 0, x: -20 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ delay: Math.min(index * 0.05, 1) }}
-        key={`${activeTab}-${index}`}
-        className={`relative flex items-center justify-between p-4 rounded-xl border mb-3 transition-all
-          ${isUser ? 'bg-accent-cyan/10 border-accent-cyan/30 shadow-[0_0_15px_rgba(45,212,191,0.1)]' : 'bg-zinc-900/50 border-white/5 hover:border-white/10'}`}
+        key={`${item.id}-${isStickyUser ? 'sticky' : index}`}
+        initial={isStickyUser ? {} : { opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: isStickyUser ? 0 : Math.min(index * 0.05, 1) }}
+        className={`flex items-center justify-between p-4 rounded-2xl border mb-3 relative overflow-hidden transition-all
+          ${isUser ? 'bg-accent-cyan/10 border-accent-cyan/30' : 'bg-zinc-900/50 border-white/5'}
+          ${isStickyUser ? 'bg-accent-cyan border-none !mb-0 shadow-[0_-10px_30px_rgba(45,212,191,0.2)]' : ''}`}
       >
         <div className="flex items-center gap-4">
-          <div className="flex flex-col items-center justify-center w-8 h-8 rounded-lg bg-black/40 border border-white/10 font-black italic text-xs">
+          <div className={`w-8 h-8 rounded-lg flex flex-col items-center justify-center font-black italic text-xs border
+            ${index === 0 ? 'bg-yellow-500 border-yellow-400 text-black' : 
+              index === 1 ? 'bg-zinc-300 border-zinc-200 text-black' :
+              index === 2 ? 'bg-orange-600 border-orange-500 text-white' :
+              'bg-black/40 border-white/10 text-zinc-400'}`}>
             {index + 1}
           </div>
+
           <div className="flex items-center gap-3">
-            {activeTab === 'individual' && (
-              <div className="w-10 h-10 rounded-full bg-zinc-800 border border-white/10 overflow-hidden flex items-center justify-center">
-                {item.photoUrl ? (
-                  <img 
-                    src={item.photoUrl} 
-                    alt="" 
-                    className="w-full h-full object-cover" 
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = 'none';
-                      (e.target as HTMLImageElement).parentElement!.classList.add('bg-zinc-700');
-                      const span = document.createElement('span');
-                      span.className = 'text-[10px] font-black text-zinc-400';
-                      span.innerText = item.username?.replace('@', '').slice(0, 2).toUpperCase() || 'CI';
-                      (e.target as HTMLImageElement).parentElement!.appendChild(span);
-                    }}
-                  />
-                ) : (
-                  <Users className="w-5 h-5 text-zinc-600" />
-                )}
-              </div>
-            )}
+            <div className="w-10 h-10 rounded-full bg-zinc-800 border border-white/10 overflow-hidden flex items-center justify-center relative">
+              {item.photoUrl ? (
+                <img src={item.photoUrl} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <Users className="w-5 h-5 text-zinc-600" />
+              )}
+              {index === 0 && <Crown className="absolute -top-1 -left-1 w-4 h-4 text-yellow-500 fill-yellow-500 -rotate-12" />}
+            </div>
+            
             <div className="flex flex-col">
-              <span className="text-sm font-bold text-white uppercase italic tracking-wider flex items-center gap-2">
-                {activeTab === 'empire' ? item.name : item.username}
-                {isUser && <span className="text-[8px] bg-accent-cyan text-black px-1.5 rounded-full not-italic">YOU</span>}
+              <span className={`text-sm font-black uppercase tracking-tight italic flex items-center gap-2
+                ${isStickyUser ? 'text-black' : 'text-white'}`}>
+                {item.username}
+                {isUser && <span className="text-[7px] bg-accent-cyan text-black px-1.5 py-0.5 rounded-full not-italic font-black">YOU</span>}
               </span>
-              <span className="text-[10px] text-zinc-500 uppercase font-mono tracking-tight">
-                {activeTab === 'empire' ? 'Strategic Sector' : item.empire}
+              <span className={`text-[9px] font-mono uppercase tracking-tighter
+                ${isStickyUser ? 'text-black/60' : 'text-zinc-500'}`}>
+                {item.region?.replace('_', ' ') || 'UNALIGNED'} SECTOR
               </span>
             </div>
           </div>
         </div>
 
         <div className="flex flex-col items-end">
-          <span className="text-sm font-black text-white italic">
-            {valueDisplay}
-          </span>
-          <span className="text-[8px] text-zinc-500 uppercase font-mono tracking-widest leading-none mt-1">
-            {subtitleDisplay}
+          <div className="flex items-center gap-1">
+            <Sword className={`w-3 h-3 ${isStickyUser ? 'text-black/60' : 'text-accent-cyan'}`} />
+            <span className={`text-sm font-black italic ${isStickyUser ? 'text-black' : 'text-white'}`}>
+              {item.cp.toLocaleString()}
+            </span>
+          </div>
+          <span className={`text-[8px] font-mono uppercase tracking-widest leading-none mt-1
+            ${isStickyUser ? 'text-black/60' : 'text-zinc-500'}`}>
+            Combat Power
           </span>
         </div>
+
+        {/* Top 3 Glow */}
+        {index < 3 && !isStickyUser && (
+          <div className={`absolute top-0 right-0 w-24 h-full opacity-10 pointer-events-none blur-2xl
+            ${index === 0 ? 'bg-yellow-500' : index === 1 ? 'bg-zinc-300' : 'bg-orange-600'}`} 
+          />
+        )}
       </motion.div>
     );
   };
 
   return (
-    <div className="min-h-screen bg-black text-white font-sans overflow-x-hidden">
+    <div className="min-h-screen bg-black text-white font-sans overflow-x-hidden selection:bg-accent-cyan selection:text-black">
       {/* Background Decor */}
       <div className="fixed inset-0 pointer-events-none z-0">
         <div className="absolute top-0 left-0 w-full h-[500px] bg-gradient-to-b from-accent-cyan/5 to-transparent" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(45,212,191,0.03),transparent_70%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(45,212,191,0.05),transparent_70%)]" />
       </div>
 
-      <div className="relative z-10 p-6 flex flex-col h-screen max-w-lg mx-auto">
+      <div className="relative z-10 flex flex-col h-screen max-w-lg mx-auto">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="p-6 pb-0 flex items-center justify-between">
           <Link href="/" className="p-3 bg-white/5 rounded-xl border border-white/10 hover:bg-white/10 transition-colors">
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="w-5 h-5 text-white" />
           </Link>
           <div className="text-right">
-            <h1 className="text-[10px] font-black uppercase tracking-[0.3em] text-accent-cyan">Imperial Registry</h1>
-            <span className="text-[8px] font-mono text-zinc-500 uppercase">
-              {lastRefreshed ? `Updated ${new Date(lastRefreshed).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Synchronizing...'}
-            </span>
+            <h1 className="text-[10px] font-black uppercase tracking-[0.3em] text-accent-cyan">Imperial Power Grid</h1>
+            <span className="text-[8px] font-mono text-zinc-500 uppercase">Strategic Combat Rankings</span>
           </div>
-        </div>
-
-        {/* Global Tabs */}
-        <div className="flex gap-2 p-1 bg-zinc-900/80 border border-white/5 rounded-2xl mb-6">
-          <button
-            onClick={() => setActiveTab('individual')}
-            className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2
-              ${activeTab === 'individual' ? 'bg-white text-black shadow-xl' : 'text-zinc-500 hover:text-white'}`}
-          >
-            <Users className="w-4 h-4" /> Individual
-          </button>
-          <button
-            onClick={() => setActiveTab('empire')}
-            className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2
-              ${activeTab === 'empire' ? 'bg-white text-black shadow-xl' : 'text-zinc-500 hover:text-white'}`}
-          >
-            <Globe className="w-4 h-4" /> Empire
-          </button>
-        </div>
-
-        {/* Sub Navigation */}
-        <div className="mb-6 overflow-x-auto">
-          {activeTab === 'empire' ? (
-            <div className="flex gap-4">
-              {[
-                { id: 'economic', label: 'Economic', icon: TrendingUp },
-                { id: 'population', label: 'Population', icon: Users },
-                { id: 'military', label: 'Military', icon: Sword, soon: true },
-              ].map(tab => (
-                <button
-                  key={tab.id}
-                  onClick={() => !tab.soon && setEmpireSubTab(tab.id as EmpireSubTab)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-[8px] font-black uppercase tracking-widest whitespace-nowrap transition-all
-                    ${empireSubTab === tab.id ? 'bg-accent-cyan border-white text-black' : 'bg-zinc-900/50 border-white/5 text-zinc-500'}
-                    ${tab.soon ? 'opacity-40 cursor-not-allowed mb-0' : ''}`}
-                >
-                  <tab.icon className="w-3 h-3" />
-                  {tab.label} {tab.soon && '(Soon)'}
-                </button>
-              ))}
-            </div>
-          ) : (
-            <div className="flex flex-col gap-4">
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setIndividualSubTab('global')}
-                  className={`flex-1 py-2 rounded-lg border text-[8px] font-black uppercase tracking-widest transition-all
-                    ${individualSubTab === 'global' ? 'bg-accent-cyan border-white text-black' : 'bg-transparent border-white/10 text-zinc-500'}`}
-                >
-                  Global Strength
-                </button>
-                <button
-                  onClick={() => setIndividualSubTab('internal')}
-                  className={`flex-1 py-2 rounded-lg border text-[8px] font-black uppercase tracking-widest transition-all
-                    ${individualSubTab === 'internal' ? 'bg-accent-cyan border-white text-black shadow-[0_0_15px_rgba(45,212,191,0.2)]' : 'bg-transparent border-white/10 text-zinc-500'}`}
-                >
-                  Internal ({userEmpire || 'Sovereign'})
-                </button>
-              </div>
-              <div className="flex gap-4 border-b border-white/5 pb-2">
-                <button
-                  onClick={() => setIndividualSort('military')}
-                  className={`text-[9px] font-black flex items-center gap-2 uppercase tracking-wide transition-colors
-                    ${individualSort === 'military' ? 'text-white' : 'text-zinc-600 hover:text-zinc-400'}`}
-                >
-                  <Sword className="w-3 h-3" /> By Military
-                </button>
-                <button
-                  onClick={() => setIndividualSort('rank')}
-                  className={`text-[9px] font-black flex items-center gap-2 uppercase tracking-wide transition-colors
-                    ${individualSort === 'rank' ? 'text-white' : 'text-zinc-600 hover:text-zinc-400'}`}
-                >
-                  <Crown className="w-3 h-3" /> By Rank
-                </button>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* List Content */}
-        <div className="flex-1 overflow-y-auto pr-1 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto px-6 py-8 custom-scrollbar">
           {loading ? (
-            <div className="flex flex-col items-center justify-center h-64 gap-4">
+            <div className="flex flex-col items-center justify-center h-full gap-4">
               <Loader2 className="w-8 h-8 text-accent-cyan animate-spin" />
-              <p className="text-[10px] font-mono text-zinc-500 uppercase animate-pulse">Calculating Hierarchy...</p>
+              <p className="text-[10px] font-mono text-zinc-500 uppercase animate-pulse">Scanning Neural Network...</p>
             </div>
           ) : rankings.length > 0 ? (
-            rankings.slice(0, 50).map((item, i) => renderRankItem(item, i))
+            <>
+              <div className="mb-6 flex items-center justify-between px-1">
+                <div className="flex items-center gap-2">
+                  <Trophy className="w-4 h-4 text-accent-cyan" />
+                  <span className="text-xs font-black uppercase tracking-widest text-white/80">Global Top 50</span>
+                </div>
+                <div className="flex items-center gap-2 text-[9px] font-mono text-zinc-600 uppercase">
+                  <Zap className="w-3 h-3" />
+                  Live Sync
+                </div>
+              </div>
+              
+              {rankings.slice(0, 50).map((item, i) => renderRankItem(item, i))}
+              
+              {rankings.length > 50 && (
+                <div className="py-8 flex flex-col items-center gap-2">
+                   <div className="w-1 h-1 bg-zinc-800 rounded-full" />
+                   <div className="w-1 h-1 bg-zinc-800 rounded-full" />
+                   <div className="w-1 h-1 bg-zinc-800 rounded-full" />
+                   <span className="text-[8px] font-mono text-zinc-600 uppercase mt-2">Expansion Pending...</span>
+                </div>
+              )}
+            </>
           ) : (
-            <div className="flex flex-col items-center justify-center h-64 border border-dashed border-white/10 rounded-2xl bg-zinc-900/20">
-              <Zap className="w-8 h-8 text-zinc-800 mb-2" />
-              <p className="text-[10px] font-mono text-zinc-600 uppercase">Registry record unavailable</p>
+            <div className="flex flex-col items-center justify-center h-full border border-dashed border-white/10 rounded-2xl bg-zinc-900/10">
+              <Star className="w-8 h-8 text-zinc-800 mb-2" />
+              <p className="text-[10px] font-mono text-zinc-600 uppercase">Registry Offline</p>
             </div>
           )}
         </div>
 
-        {/* Summary Footer */}
-        <div className="mt-6 pt-4 border-t border-white/10">
-          <div className="p-4 bg-accent-cyan shadow-[0_0_20px_rgba(45,212,191,0.3)] rounded-xl flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Trophy className="w-6 h-6 text-black" />
-              <div className="flex flex-col">
-                <span className="text-[8px] font-black text-black/60 uppercase leading-none">Your Status</span>
-                <span className="text-xs font-black text-black uppercase tracking-tight italic">
-                  {rankings.findIndex(r => String(r.telegramId) === String(telegramId)) !== -1 
-                    ? `${rankings.findIndex(r => String(r.telegramId) === String(telegramId)) + 1} TH IN REGISTRY`
-                    : 'RECORDING...'}
-                </span>
-                {rankings.find(r => String(r.telegramId) === String(telegramId)) && (
-                  <span className="text-[7px] font-mono text-black/50 uppercase mt-0.5">
-                    {individualSort === 'military' ? 'POWER' : 'LEVEL'}: {individualSort === 'military' 
-                      ? rankings.find(r => String(r.telegramId) === String(telegramId))?.militaryStrength 
-                      : rankings.find(r => String(r.telegramId) === String(telegramId))?.rankValue}
-                  </span>
-                )}
-              </div>
-            </div>
-            <div className="h-8 w-[1px] bg-black/10" />
-            <div className="text-right">
-              <div className="text-[10px] font-black text-black">REGISTRY STATUS</div>
-              <div className="text-[7px] text-black/60 uppercase font-mono">Real-time sync</div>
-            </div>
+        {/* Sticky User Rank at Bottom */}
+        {!loading && myRankInfo && (
+          <div className="p-6 pt-0 bg-gradient-to-t from-black via-black to-transparent">
+            {renderRankItem({ ...myRankInfo }, myRankInfo.rankNum - 1, true)}
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

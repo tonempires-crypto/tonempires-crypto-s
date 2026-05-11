@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { motion } from 'motion/react';
-import { Globe, MapPin, ChevronRight, Loader2 } from 'lucide-react';
+import { Globe, MapPin, ChevronRight, Loader2, Target } from 'lucide-react';
+import WorldSVGMap from './WorldSVGMap';
 
 interface Region {
   id: string;
@@ -21,6 +22,8 @@ const REGIONS: Region[] = [
 ];
 
 export default function RegionSelector({ onSelect }: { onSelect: (regionId: string) => void }) {
+  const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
+
   return (
     <div className="absolute inset-0 z-[100] bg-industrial-bg flex flex-col p-6 overflow-y-auto">
       <motion.div 
@@ -38,15 +41,31 @@ export default function RegionSelector({ onSelect }: { onSelect: (regionId: stri
         </p>
       </motion.div>
 
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: 0.2 }}
+        className="mb-8"
+      >
+        <WorldSVGMap 
+          selectedRegion={selectedId} 
+          onRegionSelect={(id) => setSelectedId(id)}
+          className="border-accent-cyan/20"
+        />
+      </motion.div>
+
       <div className="space-y-3 pb-20">
         {REGIONS.map((region, i) => (
           <motion.button
             key={region.id}
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: i * 0.1 }}
+            transition={{ delay: i * 0.1 + 0.3 }}
             onClick={() => onSelect(region.id)}
-            className={`w-full p-4 rounded-2xl border ${region.accent} ${region.color} flex items-center justify-between group hover:brightness-125 transition-all text-left`}
+            onMouseEnter={() => setSelectedId(region.id)}
+            className={`w-full p-4 rounded-2xl border transition-all text-left relative overflow-hidden group flex items-center justify-between
+              ${selectedId === region.id ? `${region.accent} ${region.color} ring-1 ring-white/10` : 'border-white/5 bg-zinc-900/40 opacity-70 hover:opacity-100'}
+            `}
           >
             <div className="flex gap-4 items-center">
               <div className="w-10 h-10 rounded-xl bg-black/40 flex items-center justify-center border border-white/5">
