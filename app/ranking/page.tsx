@@ -102,6 +102,7 @@ export default function RankingPage() {
         // Individual
         const { data: users, error: userError } = await supabase.from('users').select('username, telegram_id, rank, region, empire_name, photo_url');
         const { data: milStats, error: milError } = await supabase.from('military_stats').select('telegram_id, attack, defense');
+        const { data: resData } = await supabase.from('user_resources').select('telegram_id, total_ton_deposited');
 
         if (userError) console.error("Error fetching users for ranking:", userError);
         if (milError) console.error("Error fetching military stats for ranking:", milError);
@@ -110,7 +111,29 @@ export default function RankingPage() {
           const processed = users
             .filter((u: any) => u.telegram_id) // Filter out broken/empty records
             .map((u: any) => {
-              const mil = milStats?.find(ms => ms.telegram_id === u.telegram_id) || { attack: 0, defense: 0 };
+              const mil = milStats?.find(ms => ms.telegram_id === u.telegram_id) || { attack: 100, defense: 100 };
+              const res = resData?.find(r => r.telegram_id === u.telegram_id);
+              
+              // Calculate VIP bonus similarly to military page for "Real" feel
+              const tonDeposited = res?.total_ton_deposited || 0;
+              // Assuming roughly 100 points per 0.1 TON or similar logic for variety
+              const estimatedVipPoints = Math.floor(tonDeposited * 1000); 
+              
+              const getVipBonus = (points: number) => {
+                if (points >= 240000) return { atk: 1.30, def: 1.20 };
+                if (points >= 120000) return { atk: 1.20, def: 1.10 };
+                if (points >= 64000) return { atk: 1.12, def: 1.04 };
+                if (points >= 32000) return { atk: 1.08, def: 1.02 };
+                if (points >= 16000) return { atk: 1.04, def: 1.01 };
+                if (points >= 8000) return { atk: 1.03, def: 1.00 };
+                if (points >= 4000) return { atk: 1.02, def: 1.00 };
+                if (points >= 2000) return { atk: 1.01, def: 1.00 };
+                return { atk: 1.00, def: 1.00 };
+              };
+
+              const bonus = getVipBonus(estimatedVipPoints);
+              const finalAtk = Math.floor((mil.attack || 100) * bonus.atk);
+              const finalDef = Math.floor((mil.defense || 100) * bonus.def);
               
               // Ensure rank is a number
               let rVal = 1;
@@ -126,7 +149,7 @@ export default function RankingPage() {
                 telegramId: u.telegram_id,
                 rankValue: rVal,
                 photoUrl: u.photo_url,
-                militaryStrength: Number(mil.attack || 0) + Number(mil.defense || 0),
+                militaryStrength: finalAtk + finalDef,
                 empire: u.empire_name || u.region?.toUpperCase().replace('_', ' ') || 'UNALIGNED'
               };
             });
