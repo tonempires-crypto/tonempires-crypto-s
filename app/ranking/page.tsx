@@ -1,14 +1,16 @@
 'use client';
 
 import { motion } from 'motion/react';
-import { ArrowLeft, Trophy, Users, Shield, Sword, Loader2, Zap, Crown, Star } from 'lucide-react';
+import { ArrowLeft, Trophy, Users, Shield, Sword, Loader2, Zap, Crown, Star, Globe, TrendingUp } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
 
 export default function RankingPage() {
   const [loading, setLoading] = useState(true);
+  const [activeMode, setActiveMode] = useState<'individual' | 'empire'>('individual');
   const [rankings, setRankings] = useState<any[]>([]);
+  const [regionRankings, setRegionRankings] = useState<any[]>([]);
   const [myRankInfo, setMyRankInfo] = useState<any>(null);
   const [telegramId, setTelegramId] = useState<number | string | null>(null);
 
@@ -22,7 +24,7 @@ export default function RankingPage() {
       if (user) {
         setTelegramId(user.id);
       }
-      fetchCombatRanking(user?.id);
+      fetchRankings(user?.id);
     }
     init();
   }, []);
@@ -41,10 +43,10 @@ export default function RankingPage() {
     return { atk: 1.00, def: 1.00 };
   };
 
-  async function fetchCombatRanking(currentUserId?: number | string) {
+  async function fetchRankings(currentUserId?: number | string) {
     setLoading(true);
     try {
-      // 1. Fetch Real Users (No fake accounts - must have username and region)
+      // 1. Fetch Real Users
       const { data: users, error: userError } = await supabase
         .from('users')
         .select('username, telegram_id, photo_url, region, referred_by')
@@ -56,12 +58,12 @@ export default function RankingPage() {
       // 2. Fetch Military Stats
       const { data: milStats } = await supabase.from('military_stats').select('*');
 
-      // 3. Fetch Resources (for VIP calculation)
-      const { data: resData } = await supabase.from('user_resources').select('telegram_id, total_ton_deposited');
+      // 3. Fetch Resources
+      const { data: resData } = await supabase.from('user_resources').select('*');
 
       if (!users) return;
 
-      // 4. Calculate Referral counts for VIP points
+      // 4. Referral Map
       const referralMap: Record<string, number> = {};
       users.forEach(u => {
         if (u.referred_by) {
@@ -69,8 +71,8 @@ export default function RankingPage() {
         }
       });
 
-      // 5. Build Combined Ranking with Combat Power
-      const processed = users.map(u => {
+      // 5. Individual CP Calculation
+      const individualData = users.map(u => {
         const stats = milStats?.find(ms => String(ms.telegram_id) === String(u.telegram_id)) || { attack: 100, defense: 100 };
         const res = resData?.find(r => String(r.telegram_id) === String(u.telegram_id)) || { total_ton_deposited: 0 };
         
@@ -88,23 +90,50 @@ export default function RankingPage() {
           photoUrl: u.photo_url,
           region: u.region,
           cp: cp,
+          resources: res
         };
       });
 
-      // 6. Sort by Combat Power
-      const sorted = processed.sort((a, b) => b.cp - a.cp);
+      // 6. Empire (Regional) Calculation
+      const regionsMap: Record<string, any> = {
+        'EUROPE': { id: 'EUROPE', population: 0, military: 0, economy: 0 },
+        'AFRICA': { id: 'AFRICA', population: 0, military: 0, economy: 0 },
+        'MIDDLE_EAST': { id: 'MIDDLE_EAST', population: 0, military: 0, economy: 0 },
+        'ASIA': { id: 'ASIA', population: 0, military: 0, economy: 0 },
+        'EAST_ASIA': { id: 'EAST_ASIA', population: 0, military: 0, economy: 0 },
+      };
 
-      // 7. Find My Rank
+      individualData.forEach(p => {
+        if (regionsMap[p.region]) {
+          regionsMap[p.region].population += 1;
+          regionsMap[p.region].military += p.cp;
+          // Economy is sum of wheat, iron, gold, oil + ton_deposited
+          const res = p.resources;
+          const econScore = (res.wheat || 0) + (res.iron || 0) + (res.gold || 0) + (res.oil || 0) + ((res.total_ton_deposited || 0) * 100);
+          regionsMap[p.region].economy += econScore;
+        }
+      });
+
+      const empireList = Object.values(regionsMap).map(r => {
+        // Total Empire Score = (Pop * 1000) + Mil + Econ
+        const score = (r.population * 1000) + r.military + r.economy;
+        return { ...r, score };
+      }).sort((a, b) => b.score - a.score);
+
+      setRegionRankings(empireList);
+
+      // Individual Sort
+      const sorted = individualData.sort((a, b) => b.cp - a.cp);
       if (currentUserId) {
         const myIdx = sorted.findIndex(item => String(item.id) === String(currentUserId));
         if (myIdx !== -1) {
           setMyRankInfo({ ...sorted[myIdx], rankNum: myIdx + 1 });
         }
       }
-
       setRankings(sorted);
+
     } catch (e) {
-      console.error("Combat Ranking Error:", e);
+      console.error("Ranking Fetch Error:", e);
     } finally {
       setLoading(false);
     }
@@ -169,7 +198,6 @@ export default function RankingPage() {
           </span>
         </div>
 
-        {/* Top 3 Glow */}
         {index < 3 && !isStickyUser && (
           <div className={`absolute top-0 right-0 w-24 h-full opacity-10 pointer-events-none blur-2xl
             ${index === 0 ? 'bg-yellow-500' : index === 1 ? 'bg-zinc-300' : 'bg-orange-600'}`} 
@@ -179,68 +207,143 @@ export default function RankingPage() {
     );
   };
 
-  return (
-    <div className="min-h-screen bg-black text-white font-sans overflow-x-hidden selection:bg-accent-cyan selection:text-black">
-      {/* Background Decor */}
-      <div className="fixed inset-0 pointer-events-none z-0">
-        <div className="absolute top-0 left-0 w-full h-[500px] bg-gradient-to-b from-accent-cyan/5 to-transparent" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(45,212,191,0.05),transparent_70%)]" />
-      </div>
+  const renderRegionItem = (region: any, index: number) => {
+    return (
+      <motion.div
+        key={region.id}
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: index * 0.1 }}
+        className="bg-zinc-900/50 border border-white/5 p-5 rounded-2xl mb-4 relative overflow-hidden group"
+      >
+        <div className="flex items-center justify-between relative z-10">
+          <div className="flex items-center gap-4">
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black italic border
+              ${index === 0 ? 'bg-yellow-500 border-yellow-400 text-black' : 
+                index === 1 ? 'bg-zinc-300 border-zinc-200 text-black' :
+                index === 2 ? 'bg-orange-600 border-orange-500 text-white' :
+                'bg-black/20 border-white/10 text-zinc-400'}`}>
+              {index + 1}
+            </div>
+            <div className="flex flex-col">
+              <span className="text-sm font-black uppercase tracking-widest italic text-white flex items-center gap-2">
+                {region.id.replace('_', ' ')}
+                {index === 0 && <Crown className="w-3 h-3 text-yellow-500" />}
+              </span>
+              <div className="flex items-center gap-3 mt-1">
+                <div className="flex items-center gap-1">
+                  <Users className="w-2.5 h-2.5 text-zinc-500" />
+                  <span className="text-[10px] font-mono text-zinc-400">{region.population}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <TrendingUp className="w-2.5 h-2.5 text-accent-cyan" />
+                  <span className="text-[10px] font-mono text-zinc-400">{Math.floor(region.economy).toLocaleString()}</span>
+                </div>
+              </div>
+            </div>
+          </div>
 
-      <div className="relative z-10 flex flex-col h-screen max-w-lg mx-auto">
-        {/* Header */}
-        <div className="p-6 pb-0 flex items-center justify-between">
-          <Link href="/" className="p-3 bg-white/5 rounded-xl border border-white/10 hover:bg-white/10 transition-colors">
-            <ArrowLeft className="w-5 h-5 text-white" />
-          </Link>
           <div className="text-right">
-            <h1 className="text-[10px] font-black uppercase tracking-[0.3em] text-accent-cyan">Imperial Power Grid</h1>
-            <span className="text-[8px] font-mono text-zinc-500 uppercase">Strategic Combat Rankings</span>
+            <div className="flex items-center justify-end gap-1">
+              <Shield className="w-3 h-3 text-accent-cyan" />
+              <span className="text-sm font-black italic text-white">
+                {Math.floor(region.score / 1000).toLocaleString()}
+              </span>
+            </div>
+            <span className="text-[8px] font-mono text-zinc-600 uppercase tracking-widest leading-none mt-1">Status Level</span>
           </div>
         </div>
 
-        {/* List Content */}
-        <div className="flex-1 overflow-y-auto px-6 py-8 custom-scrollbar">
+        {/* Status Bar */}
+        <div className="mt-4 h-1 bg-white/5 rounded-full overflow-hidden">
+          <motion.div 
+            initial={{ width: 0 }}
+            animate={{ width: '100%' }}
+            transition={{ delay: 0.5 + (index * 0.1), duration: 1 }}
+            className={`h-full ${index === 0 ? 'bg-yellow-500' : 'bg-accent-cyan/40'}`} 
+          />
+        </div>
+
+        {index < 3 && (
+          <div className={`absolute top-0 right-0 w-32 h-full opacity-5 pointer-events-none blur-3xl
+            ${index === 0 ? 'bg-yellow-500' : index === 1 ? 'bg-zinc-300' : 'bg-orange-600'}`} 
+          />
+        )}
+      </motion.div>
+    );
+  };
+
+  return (
+    <div className="min-h-screen bg-black text-white font-sans overflow-x-hidden">
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <div className="absolute top-0 left-0 w-full h-[500px] bg-gradient-to-b from-accent-cyan/5 to-transparent" />
+      </div>
+
+      <div className="relative z-10 flex flex-col h-screen max-w-lg mx-auto">
+        <div className="p-6 pb-4">
+          <div className="flex items-center justify-between mb-6">
+            <Link href="/" className="p-3 bg-white/5 rounded-xl border border-white/10 hover:bg-white/10 transition-colors">
+              <ArrowLeft className="w-5 h-5 text-white" />
+            </Link>
+            <div className="text-right">
+              <h1 className="text-[10px] font-black uppercase tracking-[0.3em] text-accent-cyan">Imperial Registry</h1>
+              <span className="text-[8px] font-mono text-zinc-500 uppercase">Sovereign Performance Data</span>
+            </div>
+          </div>
+
+          {/* Mode Toggle */}
+          <div className="bg-zinc-900 overflow-hidden flex p-1 rounded-2xl border border-white/5">
+            <button 
+              onClick={() => setActiveMode('individual')}
+              className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all
+                ${activeMode === 'individual' ? 'bg-accent-cyan text-black shadow-lg' : 'text-zinc-500 hover:text-white'}`}
+            >
+              <Users className="w-3.5 h-3.5" />
+              Players
+            </button>
+            <button 
+              onClick={() => setActiveMode('empire')}
+              className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all
+                ${activeMode === 'empire' ? 'bg-accent-cyan text-black shadow-lg' : 'text-zinc-500 hover:text-white'}`}
+            >
+              <Globe className="w-3.5 h-3.5" />
+              Empires
+            </button>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-6 pb-32 custom-scrollbar">
           {loading ? (
             <div className="flex flex-col items-center justify-center h-full gap-4">
               <Loader2 className="w-8 h-8 text-accent-cyan animate-spin" />
-              <p className="text-[10px] font-mono text-zinc-500 uppercase animate-pulse">Scanning Neural Network...</p>
+              <p className="text-[10px] font-mono text-zinc-500 uppercase animate-pulse">Synchronizing Data...</p>
             </div>
-          ) : rankings.length > 0 ? (
+          ) : (
             <>
               <div className="mb-6 flex items-center justify-between px-1">
                 <div className="flex items-center gap-2">
                   <Trophy className="w-4 h-4 text-accent-cyan" />
-                  <span className="text-xs font-black uppercase tracking-widest text-white/80">Global Top 50</span>
+                  <span className="text-xs font-black uppercase tracking-widest text-white/80">
+                    {activeMode === 'individual' ? 'Global Top 50' : 'Continental Order'}
+                  </span>
                 </div>
                 <div className="flex items-center gap-2 text-[9px] font-mono text-zinc-600 uppercase">
-                  <Zap className="w-3 h-3" />
+                  <Zap className="w-3 h-3 text-yellow-500" />
                   Live Sync
                 </div>
               </div>
-              
-              {rankings.slice(0, 50).map((item, i) => renderRankItem(item, i))}
-              
-              {rankings.length > 50 && (
-                <div className="py-8 flex flex-col items-center gap-2">
-                   <div className="w-1 h-1 bg-zinc-800 rounded-full" />
-                   <div className="w-1 h-1 bg-zinc-800 rounded-full" />
-                   <div className="w-1 h-1 bg-zinc-800 rounded-full" />
-                   <span className="text-[8px] font-mono text-zinc-600 uppercase mt-2">Expansion Pending...</span>
-                </div>
+
+              {activeMode === 'individual' ? (
+                rankings.slice(0, 50).map((item, i) => renderRankItem(item, i))
+              ) : (
+                regionRankings.map((region, i) => renderRegionItem(region, i))
               )}
             </>
-          ) : (
-            <div className="flex flex-col items-center justify-center h-full border border-dashed border-white/10 rounded-2xl bg-zinc-900/10">
-              <Star className="w-8 h-8 text-zinc-800 mb-2" />
-              <p className="text-[10px] font-mono text-zinc-600 uppercase">Registry Offline</p>
-            </div>
           )}
         </div>
 
-        {/* Sticky User Rank at Bottom */}
-        {!loading && myRankInfo && (
-          <div className="p-6 pt-0 bg-gradient-to-t from-black via-black to-transparent">
+        {!loading && activeMode === 'individual' && myRankInfo && (
+          <div className="p-6 pt-0 bg-gradient-to-t from-black via-black to-transparent absolute bottom-0 left-0 right-0 max-w-lg mx-auto">
             {renderRankItem({ ...myRankInfo }, myRankInfo.rankNum - 1, true)}
           </div>
         )}
@@ -248,3 +351,4 @@ export default function RankingPage() {
     </div>
   );
 }
+
