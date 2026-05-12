@@ -18,6 +18,7 @@ import {
   Gift,
   Video,
   Send,
+  Users,
   MessageSquare,
   Zap,
   ChevronRight,
@@ -42,26 +43,24 @@ export default function TasksSection({ userData, resources, onResourcesUpdate }:
     { id: 'react_tg', title: t('tasks.react_tg'), reward: '10 ALL', platform: 'Telegram', icon: Send, link: 'https://t.me/T0NEmpires' },
     { id: 'react_tiktok', title: t('tasks.react_tiktok'), reward: '10 ALL', platform: 'TikTok', icon: Video, link: 'https://www.tiktok.com/@tonempires' },
     { id: 'repost_insta', title: t('tasks.repost_insta'), reward: '10 ALL', platform: 'Instagram', icon: Instagram, link: 'https://www.instagram.com/tonempires/' },
-    { id: 'react_fb', title: t('tasks.react_fb'), reward: '10 ALL', platform: 'Facebook', icon: Facebook, link: 'https://www.facebook.com/profile.php?id=61589243985940' },
     { id: 'react_wa', title: t('tasks.react_wa'), reward: '10 ALL', platform: 'WhatsApp', icon: MessageSquare, link: 'https://whatsapp.com/channel/0029Vb7cgucKrWQmo5dq8J2V' },
   ];
 
   const INTERACTIVE_TASKS = [
-    { id: 'daily_login', title: t('tasks.daily_login') || 'Daily Imperial Check-in', reward: '5 WHT', platform: 'Empire', icon: Zap, link: '#' },
-    { id: 'watch_briefing', title: t('tasks.briefing'), reward: '10 ALL', platform: 'YouTube', icon: Play, link: 'https://www.youtube.com/@TonEmpires' },
+    { id: 'daily_login', title: t('tasks.daily_login'), reward: '5 WHT', platform: 'Empire', icon: Zap, link: '#' },
+    { id: 'watch_briefing', title: t('tasks.briefing'), reward: '15 ALL', platform: 'YouTube', icon: Play, link: 'https://www.youtube.com/@TonEmpires' },
   ];
 
   const ONE_TIME_TASKS = [
-    { id: 'join_empire', title: 'Join the Empire', reward: '20 ALL', platform: 'Protocol', icon: Crown, link: '#' },
-    { id: 'link_wallet', title: t('tasks.link_wallet') || 'Link Imperial Wallet', reward: '50 ALL', platform: 'Vault', icon: Wallet, link: '#' },
+    { id: 'join_empire', title: t('tasks.join_empire'), reward: '20 ALL', platform: 'Protocol', icon: Crown, link: '#' },
+    { id: 'link_wallet', title: t('tasks.link_wallet'), reward: '50 ALL', platform: 'Vault', icon: Wallet, link: '#' },
+    { id: 'invite_recruits', title: t('tasks.invite_recruits'), reward: '100 ALL', platform: 'Expansion', icon: Users, link: '#' },
+    { id: 'join_discord', title: t('tasks.join_discord'), reward: '50 ALL', platform: 'Discord', icon: Hash, link: 'https://discord.gg/KH2mzsCAD' },
+    { id: 'follow_youtube', title: t('tasks.follow_youtube'), reward: '30 ALL', platform: 'YouTube', icon: Youtube, link: 'https://www.youtube.com/@TonEmpires' },
     { id: 'follow_x', title: t('tasks.follow_x'), reward: '20 ALL', platform: 'X', icon: Twitter, link: 'https://x.com/Ton_Empires' },
     { id: 'follow_tg', title: t('tasks.follow_tg'), reward: '20 ALL', platform: 'Telegram', icon: Send, link: 'https://t.me/T0NEmpires' },
     { id: 'follow_tiktok', title: t('tasks.follow_tiktok'), reward: '20 ALL', platform: 'TikTok', icon: Video, link: 'https://www.tiktok.com/@tonempires' },
-    { id: 'follow_youtube', title: t('tasks.follow_youtube'), reward: '30 ALL', platform: 'YouTube', icon: Youtube, link: 'https://www.youtube.com/@TonEmpires' },
     { id: 'follow_insta', title: t('tasks.follow_insta'), reward: '20 ALL', platform: 'Instagram', icon: Instagram, link: 'https://www.instagram.com/tonempires/' },
-    { id: 'follow_fb', title: t('tasks.follow_fb'), reward: '20 ALL', platform: 'Facebook', icon: Facebook, link: 'https://www.facebook.com/profile.php?id=61589243985940' },
-    { id: 'follow_wa', title: t('tasks.follow_wa'), reward: '20 ALL', platform: 'WhatsApp', icon: MessageSquare, link: 'https://whatsapp.com/channel/0029Vb7cgucKrWQmo5dq8J2V' },
-    { id: 'join_discord', title: t('tasks.join_discord'), reward: '50 ALL', platform: 'Discord', icon: Hash, link: 'https://discord.gg/KH2mzsCAD' },
   ];
 
   const [loading, setLoading] = useState(true);
