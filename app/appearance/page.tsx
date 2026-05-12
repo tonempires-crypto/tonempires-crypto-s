@@ -2,11 +2,13 @@
 
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowLeft, Plus, Shield, Sword, Trophy, Crown, Zap, Loader2, User } from 'lucide-react';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
+import { useTranslation } from 'react-i18next';
 
 export default function AppearancePage() {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [telegramId, setTelegramId] = useState<number | null>(null);
   const [userData, setUserData] = useState<any>(null);
@@ -26,10 +28,10 @@ export default function AppearancePage() {
     }
   }, [selectedSkin, loading]);
 
-  const skins = [
-    { id: 'man1', label: 'MALE UNIT', video: '/man1.mp4' },
-    { id: 'woman1', label: 'FEMALE UNIT', video: '/woman1.mp4' }
-  ];
+  const skins = useMemo(() => [
+    { id: 'man1', label: t('appearance.male'), video: '/man1.mp4' },
+    { id: 'woman1', label: t('appearance.female'), video: '/woman1.mp4' }
+  ], [t]);
 
   useEffect(() => {
     async function fetchData() {
@@ -129,8 +131,8 @@ export default function AppearancePage() {
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div className="text-right">
-            <h1 className="text-[10px] font-black uppercase tracking-widest text-accent-cyan">Unit Appearance</h1>
-            <span className="text-[8px] font-mono text-zinc-500 uppercase">Registry Status: Synchronized</span>
+            <h1 className="text-[10px] font-black uppercase tracking-widest text-accent-cyan">{t('appearance.title')}</h1>
+            <span className="text-[8px] font-mono text-zinc-500 uppercase">{t('appearance.status')}</span>
           </div>
         </div>
 
@@ -176,29 +178,29 @@ export default function AppearancePage() {
               {/* Row 1 */}
               <div className="flex flex-col">
                 <span className="text-[7px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-1 flex items-center gap-1">
-                  <User className="w-2 h-2" /> Identification
+                  <User className="w-2 h-2" /> {t('appearance.identification')}
                 </span>
                 <span className="text-xs font-bold text-white uppercase italic">{userData?.username || 'ANONYMOUS'}</span>
               </div>
               <div className="flex flex-col">
                 <span className="text-[7px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-1 flex items-center gap-1">
-                  <Crown className="w-2 h-2" /> Sovereign Rank
+                  <Crown className="w-2 h-2" /> {t('appearance.sovereign_rank')}
                 </span>
-                <span className="text-xs font-bold text-white uppercase italic">LVL {userData?.rank || '1'}</span>
+                <span className="text-xs font-bold text-white uppercase italic">{t('profile.level')} {userData?.rank || '1'}</span>
               </div>
 
               {/* Row 2 */}
               <div className="flex flex-col">
                 <span className="text-[7px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-1 flex items-center gap-1">
-                  <Trophy className="w-2 h-2" /> VIP Protocol
+                  <Trophy className="w-2 h-2" /> {t('appearance.vip_protocol')}
                 </span>
-                <span className="text-xs font-bold text-yellow-400 uppercase italic">Tier {getVipLevel(vipPoints)}</span>
+                <span className="text-xs font-bold text-yellow-400 uppercase italic">{t('profile.tier')} {getVipLevel(vipPoints)}</span>
               </div>
               <div className="flex flex-col">
                 <span className="text-[7px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-1 flex items-center gap-1">
-                  <Zap className="w-2 h-2" /> Sector Authority
+                  <Zap className="w-2 h-2" /> {t('appearance.sector_authority')}
                 </span>
-                <span className="text-xs font-bold text-emerald-500 uppercase italic">{userData?.empire_name || 'UNITED SECTORS'}</span>
+                <span className="text-xs font-bold text-emerald-500 uppercase italic">{(userData?.region || t('regions.neutral')).replace('_', ' ').toUpperCase()}</span>
               </div>
 
               {/* Stats Row */}
@@ -208,7 +210,7 @@ export default function AppearancePage() {
                     <Sword className="w-3 h-3 text-red-500" />
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-[7px] font-black uppercase text-zinc-500">Attack Force</span>
+                    <span className="text-[7px] font-black uppercase text-zinc-500">{t('appearance.attack_force')}</span>
                     <span className="text-sm font-black text-red-500">{stats.atk.toLocaleString()}</span>
                   </div>
                 </div>
@@ -217,7 +219,7 @@ export default function AppearancePage() {
                     <Shield className="w-3 h-3 text-blue-500" />
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-[7px] font-black uppercase text-zinc-500">Defense Grid</span>
+                    <span className="text-[7px] font-black uppercase text-zinc-500">{t('appearance.defense_grid')}</span>
                     <span className="text-sm font-black text-blue-500">{stats.def.toLocaleString()}</span>
                   </div>
                 </div>

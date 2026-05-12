@@ -2,11 +2,13 @@
 
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowLeft, Sword, Shield, Target, ShoppingBag, Trophy, Loader2, Zap } from 'lucide-react';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
+import { useTranslation } from 'react-i18next';
 
 export default function MilitaryCampPage() {
+  const { t } = useTranslation();
   const [notification, setNotification] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ level: 1, exp: 0, attack: 100, defense: 100 });
@@ -21,10 +23,10 @@ export default function MilitaryCampPage() {
 
   const totalWeaponsOwned = Object.values(inventory).reduce((a, b) => a + b, 0);
 
-  const SHOP_ITEMS = [
+  const SHOP_ITEMS = useMemo(() => [
     { 
       id: 'knife', 
-      name: 'Tactical Knife', 
+      name: t('military.items.knife'), 
       image: 'https://ik.imagekit.io/o8kv1qv3h/knife.png', 
       cost: { iron: 1000 }, 
       effect: { attack: 0.1 }, 
@@ -32,7 +34,7 @@ export default function MilitaryCampPage() {
     },
     { 
       id: 'gun', 
-      name: 'Sidearm', 
+      name: t('military.items.gun'), 
       image: 'https://ik.imagekit.io/o8kv1qv3h/gun.jpg', 
       cost: { iron: 10000 }, 
       effect: { attack: 0.3 }, 
@@ -40,7 +42,7 @@ export default function MilitaryCampPage() {
     },
     { 
       id: 'akm', 
-      name: 'AKM Rifle', 
+      name: t('military.items.akm'), 
       image: 'https://ik.imagekit.io/o8kv1qv3h/pixel-art-smg-pixelated-short-machine-gun-smg-weapon-icons-background-pixelated-for-the-pixel-art-game-and-icon-for-website-and-video-game-old-school-retro-vector.jpg', 
       cost: { iron: 50000 }, 
       effect: { attack: 0.6 }, 
@@ -48,7 +50,7 @@ export default function MilitaryCampPage() {
     },
     { 
       id: 'rpg', 
-      name: 'RPG Launcher', 
+      name: t('military.items.rpg'), 
       image: 'https://ik.imagekit.io/o8kv1qv3h/pixel-art-bazooka-pixelated-bazooka-bazooka-rpg-weapon-icons-background-pixelated-for-the-pixel-art-game-and-icon-for-website-and-video-game-old-school-retro-vector.jpg', 
       cost: { iron: 100000 }, 
       effect: { attack: 1.0 }, 
@@ -56,7 +58,7 @@ export default function MilitaryCampPage() {
     },
     { 
       id: 'armored_car', 
-      name: 'Armored Scout', 
+      name: t('military.items.armored_car'), 
       image: 'https://ik.imagekit.io/o8kv1qv3h/pixel-art-post-apocalyptic-armored-vehicle-vector.jpg', 
       cost: { iron: 100000, oil: 100000 }, 
       effect: { attack: 1.0, defense: 0.2 }, 
@@ -64,7 +66,7 @@ export default function MilitaryCampPage() {
     },
     { 
       id: 'tank', 
-      name: 'Main Battle Tank', 
+      name: t('military.items.tank'), 
       image: 'https://ik.imagekit.io/o8kv1qv3h/71gjtQkvUSL.png', 
       cost: { iron: 100000, oil: 150000 }, 
       effect: { attack: 1.0, defense: 0.4 }, 
@@ -72,13 +74,13 @@ export default function MilitaryCampPage() {
     },
     { 
       id: 'aircraft', 
-      name: 'F-14 Interceptor', 
+      name: t('military.items.aircraft'), 
       image: 'https://ik.imagekit.io/o8kv1qv3h/f14_222_5.png', 
       cost: { ton: 5, iron: 200000, oil: 200000 }, 
       effect: { attack: 2.0, defense: 2.0 }, 
       desc: '+200% ATK | +200% DEF' 
     }
-  ];
+  ], [t]);
 
   const WHEAT_PER_SESSION = 50 + (stats.level - 1) * 10;
 
@@ -153,13 +155,13 @@ export default function MilitaryCampPage() {
 
     // Check Rank Limit (Weapon Limit = Rank Level)
     if (totalWeaponsOwned >= userRank) {
-      return showNotification(`Arsenal Maxed! Upgrade Rank in Profile to own more than ${userRank} units.`);
+      return showNotification(t('military.arsenal_maxed', { limit: userRank }));
     }
 
     // Check Balance
-    if (item.cost.iron && balances.iron < item.cost.iron) return showNotification("Insufficient Iron!");
-    if (item.cost.oil && balances.oil < item.cost.oil) return showNotification("Insufficient Oil!");
-    if (item.cost.ton && balances.ton < item.cost.ton) return showNotification("Insufficient TON!");
+    if (item.cost.iron && balances.iron < item.cost.iron) return showNotification(t('military.insufficient_iron'));
+    if (item.cost.oil && balances.oil < item.cost.oil) return showNotification(t('military.insufficient_oil'));
+    if (item.cost.ton && balances.ton < item.cost.ton) return showNotification(t('military.insufficient_ton'));
 
     setLoading(true);
     try {
@@ -203,10 +205,10 @@ export default function MilitaryCampPage() {
       setInventory(prev => ({ ...prev, [item.id]: (prev[item.id] || 0) + 1 }));
       setStats({ ...stats, attack: newStats.attack, defense: newStats.defense });
       
-      showNotification(`${item.name} purchased! Effects stacked.`);
+      showNotification(t('military.item_purchased', { name: item.name }));
     } catch (e: any) {
       console.error(e);
-      showNotification("Purchase failed. System error.");
+      showNotification(t('military.purchase_failed'));
     } finally {
       setLoading(false);
     }
@@ -219,7 +221,7 @@ export default function MilitaryCampPage() {
 
   const startTraining = () => {
     if (wheatBalance < WHEAT_PER_SESSION) {
-      showNotification(`Insufficient Wheat! Need ${WHEAT_PER_SESSION} for one training session.`);
+      showNotification(t('military.insufficient_wheat', { fee: WHEAT_PER_SESSION }));
       return;
     }
     setIsTraining(true);
@@ -293,8 +295,8 @@ export default function MilitaryCampPage() {
             <ArrowLeft className="w-5 h-5 text-white" />
           </Link>
           <div className="flex flex-col">
-            <h1 className="text-sm font-black uppercase tracking-widest text-white">Military Camp</h1>
-            <span className="text-[10px] font-mono text-accent-cyan uppercase">Command & Control Sector</span>
+            <h1 className="text-sm font-black uppercase tracking-widest text-white">{t('military.title')}</h1>
+            <span className="text-[10px] font-mono text-accent-cyan uppercase">{t('military.title')} - {t('appearance.sector_authority')}</span>
           </div>
         </div>
       </div>
@@ -305,15 +307,15 @@ export default function MilitaryCampPage() {
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4 mb-4">
           <div className="tech-card bg-black/60 border-red-500/30 p-4 backdrop-blur-sm relative overflow-hidden">
             <div className="flex justify-between items-center mb-4">
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-red-500">Military Strength Index</span>
-              <span className="text-[9px] font-mono text-zinc-500">WHEAT: {wheatBalance.toLocaleString()}</span>
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-red-500">{t('military.strength_index')}</span>
+              <span className="text-[9px] font-mono text-zinc-500">{t('dash.resources.wheat').toUpperCase()}: {wheatBalance.toLocaleString()}</span>
             </div>
             
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-2">
                 <div className="flex justify-between items-end">
                   <div className="flex flex-col">
-                    <span className="text-[9px] font-mono text-zinc-500 uppercase">Attack</span>
+                    <span className="text-[9px] font-mono text-zinc-500 uppercase">{t('appearance.attack_force')}</span>
                     {vipBonus.atk > 1 && <span className="text-[7px] text-red-400 font-bold">VIP +{Math.round((vipBonus.atk-1)*100)}%</span>}
                   </div>
                   <span className="text-xl font-black italic text-white leading-none">{totalAttack}</span>
@@ -325,7 +327,7 @@ export default function MilitaryCampPage() {
               <div className="space-y-2">
                 <div className="flex justify-between items-end">
                   <div className="flex flex-col">
-                    <span className="text-[9px] font-mono text-zinc-500 uppercase">Defense</span>
+                    <span className="text-[9px] font-mono text-zinc-500 uppercase">{t('appearance.defense_grid')}</span>
                     {vipBonus.def > 1 && <span className="text-[7px] text-blue-400 font-bold">VIP +{Math.round((vipBonus.def-1)*100)}%</span>}
                   </div>
                   <span className="text-xl font-black italic text-white leading-none">{totalDefense}</span>
@@ -341,9 +343,9 @@ export default function MilitaryCampPage() {
             <div className="flex justify-between items-center mb-2">
               <div className="flex items-center gap-2">
                 <Trophy className="w-3 h-3 text-accent-cyan" />
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-accent-cyan">Imperial Rank</span>
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-accent-cyan">{t('appearance.sovereign_rank')}</span>
               </div>
-              <span className="text-[10px] font-mono text-zinc-500">LVL {stats.level} / 100</span>
+              <span className="text-[10px] font-mono text-zinc-500">{t('profile.level')} {stats.level} / 100</span>
             </div>
             <div className="relative py-2">
               <div className="h-4 w-full bg-zinc-900 border border-white/5 p-0.5 rounded-sm">
@@ -352,8 +354,8 @@ export default function MilitaryCampPage() {
                 </motion.div>
               </div>
               <div className="flex justify-between mt-1 px-0.5">
-                <span className="text-[7px] font-mono text-zinc-600">Training sessions: {stats.exp}/10</span>
-                <span className="text-[7px] font-mono text-zinc-600 italic">Cost: {WHEAT_PER_SESSION} Wheat</span>
+                <span className="text-[7px] font-mono text-zinc-600">{t('military.session_complete', { exp: stats.exp })}</span>
+                <span className="text-[7px] font-mono text-zinc-600 italic">{t('profile.points')}: {WHEAT_PER_SESSION} {t('dash.resources.wheat')}</span>
               </div>
             </div>
           </div>
@@ -364,14 +366,14 @@ export default function MilitaryCampPage() {
           <motion.button whileTap={{ scale: 0.95 }} onClick={startTraining} className="group relative h-24 bg-zinc-900/40 border border-white/10 hover:border-accent-cyan/50 transition-all rounded-lg overflow-hidden flex flex-col items-center justify-center gap-2">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(45,212,191,0.1)_0%,transparent_70%)] opacity-0 group-hover:opacity-100 transition-opacity" />
             <Target className="w-6 h-6 text-zinc-500 group-hover:text-accent-cyan transition-colors" />
-            <span className="text-[10px] font-black uppercase tracking-[0.1em] text-zinc-400 group-hover:text-white">Training Range</span>
+            <span className="text-[10px] font-black uppercase tracking-[0.1em] text-zinc-400 group-hover:text-white">{t('military.training_range')}</span>
             <div className="absolute bottom-0 left-0 w-full h-0.5 bg-accent-cyan scale-x-0 group-hover:scale-x-100 transition-transform origin-left" />
           </motion.button>
 
           <motion.button whileTap={{ scale: 0.95 }} onClick={() => setIsShopOpen(true)} className="group relative h-24 bg-zinc-900/40 border border-white/10 hover:border-red-500/50 transition-all rounded-lg overflow-hidden flex flex-col items-center justify-center gap-2">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(220,38,38,0.1)_0%,transparent_70%)] opacity-0 group-hover:opacity-100 transition-opacity" />
             <ShoppingBag className="w-6 h-6 text-zinc-500 group-hover:text-red-500 transition-colors" />
-            <span className="text-[10px] font-black uppercase tracking-[0.1em] text-zinc-400 group-hover:text-white">The Shop</span>
+            <span className="text-[10px] font-black uppercase tracking-[0.1em] text-zinc-400 group-hover:text-white">{t('military.the_shop')}</span>
             <div className="absolute bottom-0 left-0 w-full h-0.5 bg-red-500 scale-x-0 group-hover:scale-x-100 transition-transform origin-left" />
           </motion.button>
         </div>
@@ -387,17 +389,17 @@ export default function MilitaryCampPage() {
                   <ArrowLeft className="w-4 h-4 text-zinc-400" />
                 </button>
                 <div className="flex flex-col">
-                  <h2 className="text-sm font-black uppercase tracking-widest text-white">Imperial Armory</h2>
-                  <span className="text-[8px] font-mono text-zinc-500 uppercase tracking-tighter">Capacity: {totalWeaponsOwned} / {userRank} Units</span>
+                  <h2 className="text-sm font-black uppercase tracking-widest text-white">{t('military.imperial_armory')}</h2>
+                  <span className="text-[8px] font-mono text-zinc-500 uppercase tracking-tighter">{t('military.capacity', { owned: totalWeaponsOwned, limit: userRank })}</span>
                 </div>
               </div>
               <div className="flex gap-4">
                 <div className="flex flex-col items-end">
-                   <span className="text-[8px] font-mono text-zinc-500 uppercase">Iron</span>
+                   <span className="text-[8px] font-mono text-zinc-500 uppercase">{t('dash.resources.iron')}</span>
                    <span className="text-[10px] font-black text-white">{balances.iron.toLocaleString()}</span>
                 </div>
                 <div className="flex flex-col items-end">
-                   <span className="text-[8px] font-mono text-zinc-500 uppercase">Oil</span>
+                   <span className="text-[8px] font-mono text-zinc-500 uppercase">{t('dash.resources.oil')}</span>
                    <span className="text-[10px] font-black text-white">{balances.oil.toLocaleString()}</span>
                 </div>
               </div>
@@ -413,7 +415,7 @@ export default function MilitaryCampPage() {
                     <div className="aspect-square rounded-lg bg-black/40 overflow-hidden relative">
                        <img src={item.image} alt={item.name} className="w-full h-full object-cover opacity-80 group-hover:scale-110 transition-transform duration-700" />
                        <div className="absolute top-1 right-1 px-1.5 py-0.5 bg-accent-cyan/10 border border-accent-cyan/20 rounded text-[7px] font-black uppercase text-accent-cyan">
-                          {item.id === 'aircraft' ? 'LEGENDARY' : 'TACTICAL'}
+                          {item.id === 'aircraft' ? t('military.legendary') : t('military.tactical')}
                        </div>
                     </div>
                     
@@ -438,7 +440,7 @@ export default function MilitaryCampPage() {
                          onClick={() => handlePurchase(item)}
                          className="w-full py-1.5 bg-white/5 hover:bg-white/10 rounded font-black text-[9px] uppercase tracking-widest text-zinc-400 hover:text-white transition-all ring-1 ring-white/5"
                        >
-                         Purchase
+                         {t('military.purchase')}
                        </button>
                     </div>
                   </motion.div>
@@ -449,7 +451,7 @@ export default function MilitaryCampPage() {
             {/* INVENTORY FOOTER ROW */}
             <div className="p-4 bg-zinc-950 border-t border-white/10">
                <div className="flex items-center justify-between mb-3 px-1">
-                  <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500">Arsenal Inventory</span>
+                  <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500">{t('military.arsenal_inventory')}</span>
                   <div className="w-32 h-[1px] bg-gradient-to-r from-transparent via-zinc-800 to-transparent" />
                </div>
                <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
@@ -475,11 +477,11 @@ export default function MilitaryCampPage() {
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[300] bg-black/95 flex flex-col items-center justify-center p-6 pb-20 text-center">
             <div className="w-full max-w-sm space-y-6">
               <div className="text-center">
-                <h2 className="text-2xl font-black italic text-accent-cyan mb-1">TARGET PRACTICE</h2>
+                <h2 className="text-2xl font-black italic text-accent-cyan mb-1">{t('military.target_practice')}</h2>
                 <div className="flex items-center justify-center gap-4 text-zinc-500 font-mono text-[10px] uppercase">
-                  <span>Targets Hit: {gameScore} / 5</span>
+                  <span>{t('military.targets_hit', { score: gameScore })}</span>
                   <span className="text-accent-cyan">|</span>
-                  <span>Fee: {WHEAT_PER_SESSION} Wheat</span>
+                  <span>{t('military.fee', { fee: WHEAT_PER_SESSION })}</span>
                 </div>
               </div>
 
@@ -490,7 +492,7 @@ export default function MilitaryCampPage() {
                     onComplete={(score) => {
                       if (score >= 5) completeTraining();
                       else {
-                        showNotification("Protocol Failed: Inaccurate fire. Need 5 hits.");
+                        showNotification(t('military.protocol_failed'));
                         setIsTraining(false);
                       }
                     }} 
@@ -498,13 +500,13 @@ export default function MilitaryCampPage() {
                 ) : (
                   <div className="flex flex-col items-center gap-4">
                     <Loader2 className="w-8 h-8 text-accent-cyan animate-spin" />
-                    <span className="text-[10px] font-mono text-zinc-500 uppercase animate-pulse">Initializing simulation...</span>
+                    <span className="text-[10px] font-mono text-zinc-500 uppercase animate-pulse">{t('military.initializing')}</span>
                   </div>
                 )}
               </div>
 
               <button onClick={() => setIsTraining(false)} className="w-full py-3 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:text-white transition-colors">
-                Abandon Exercise
+                {t('military.abandon')}
               </button>
             </div>
           </motion.div>
@@ -530,6 +532,7 @@ export default function MilitaryCampPage() {
 }
 
 function ShootingGame({ onComplete, onScoreChange }: { onComplete: (score: number) => void, onScoreChange: (s: number) => void }) {
+  const { t } = useTranslation();
   const [score, setScore] = useState(0);
   const [targetPos, setTargetPos] = useState({ x: 50, y: 50 });
   const [timeLeft, setTimeLeft] = useState(20);
@@ -573,7 +576,7 @@ function ShootingGame({ onComplete, onScoreChange }: { onComplete: (score: numbe
   return (
     <div ref={containerRef} className="absolute inset-0 cursor-crosshair">
       <div className="absolute top-4 left-4 flex flex-col gap-1 items-start">
-         <span className="text-[9px] font-mono text-accent-cyan uppercase">Range Timer: {timeLeft}s</span>
+         <span className="text-[9px] font-mono text-accent-cyan uppercase">{t('military.range_timer', { time: timeLeft })}</span>
          <div className="flex gap-1">
             {Array.from({length: 5}).map((_, i) => (
               <div key={i} className={`w-3 h-1 ${i < score ? 'bg-red-500' : 'bg-zinc-800'}`} />

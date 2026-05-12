@@ -2,33 +2,35 @@
 
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowLeft, Home, Car, ShoppingBag, Map as MapIcon, Info, Lock, CheckCircle2, Loader2 } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
-
-const ASSET_CONFIG = {
-  house: { 
-    name: 'Imperial Estate', 
-    cost: { iron: 1000000 }, 
-    bonus: '+100% Extraction Rate',
-    image: 'https://ik.imagekit.io/trya1gkkd/dek1lf1-611eef51-14d6-4b95-a04e-a4049b4b5648.png'
-  },
-  car: { 
-    name: 'Executive Transport', 
-    cost: { oil: 1000000 }, 
-    bonus: '+100% Extraction Rate',
-    image: 'https://ik.imagekit.io/trya1gkkd/00-final-product.png'
-  },
-  shop: { 
-    name: 'Regional Market', 
-    cost: { gold: 1000000 }, 
-    bonus: 'Black Market Access',
-    image: 'https://ik.imagekit.io/trya1gkkd/i2.png'
-  }
-};
+import { useTranslation } from 'react-i18next';
 
 export default function RealEstatePage() {
+  const { t } = useTranslation();
   const [notification, setNotification] = useState<string | null>(null);
+
+  const ASSET_CONFIG = useMemo(() => ({
+    house: { 
+      name: t('housing.assets.house'), 
+      cost: { iron: 1000000 }, 
+      bonus: t('housing.bonuses.house'),
+      image: 'https://ik.imagekit.io/trya1gkkd/dek1lf1-611eef51-14d6-4b95-a04e-a4049b4b5648.png'
+    },
+    car: { 
+      name: t('housing.assets.car'), 
+      cost: { oil: 1000000 }, 
+      bonus: t('housing.bonuses.car'),
+      image: 'https://ik.imagekit.io/trya1gkkd/00-final-product.png'
+    },
+    shop: { 
+      name: t('housing.assets.shop'), 
+      cost: { gold: 1000000 }, 
+      bonus: t('housing.bonuses.shop'),
+      image: 'https://ik.imagekit.io/trya1gkkd/i2.png'
+    }
+  }), [t]);
   const [loading, setLoading] = useState(true);
   const [telegramId, setTelegramId] = useState<number | null>(null);
   const [balances, setBalances] = useState({ iron: 0, oil: 0, gold: 0 });
@@ -89,7 +91,7 @@ export default function RealEstatePage() {
     const resType = Object.keys(cost)[0] as keyof typeof balances;
     const price = (cost as any)[resType];
     if (balances[resType] < price) {
-      setNotification(`Insufficient ${resType.toUpperCase()}! Need ${price.toLocaleString()}.`);
+      setNotification(t('housing.insufficient_funds', { res: resType.toUpperCase(), price: price.toLocaleString() }));
       return;
     }
 
@@ -114,10 +116,10 @@ export default function RealEstatePage() {
       setBalances(prev => ({ ...prev, [resType]: prev[resType] - price }));
       setUnlocked(prev => ({ ...prev, [type]: true }));
       setSelectedAsset(null);
-      setNotification(`${selectedAsset.name} Unlocked Successfully!`);
+      setNotification(t('housing.unlocked_success', { name: selectedAsset.name }));
     } catch (e) {
       console.error(e);
-      setNotification("Transaction failed. System error.");
+      setNotification(t('housing.transaction_failed'));
     } finally {
       setProcessing(false);
     }
@@ -137,13 +139,13 @@ export default function RealEstatePage() {
               <ArrowLeft className="w-5 h-5 text-white" />
             </Link>
             <div className="flex flex-col">
-              <h1 className="text-xs font-black uppercase tracking-[0.2em] text-white">Land Registry</h1>
-              <span className="text-[10px] font-mono text-emerald-400 uppercase">Sector 09-A Real Estate</span>
+              <h1 className="text-xs font-black uppercase tracking-[0.2em] text-white">{t('housing.title')}</h1>
+              <span className="text-[10px] font-mono text-emerald-400 uppercase">{t('housing.status')}</span>
             </div>
           </div>
           <div className="flex flex-col items-end">
             <span className="text-[8px] font-mono text-zinc-400 uppercase">Status</span>
-            <span className="text-[10px] font-black text-white">[{Object.values(unlocked).filter(Boolean).length}/3] OWNED</span>
+            <span className="text-[10px] font-black text-white">{t('housing.owned_count', { owned: Object.values(unlocked).filter(Boolean).length })}</span>
           </div>
         </div>
       </div>
@@ -180,40 +182,40 @@ export default function RealEstatePage() {
                <div className="absolute top-0 right-0 p-4 opacity-5"><Home className="w-20 h-20 text-white" /></div>
                
                <h3 className="text-xl font-black italic text-white uppercase mb-1">{selectedAsset.name}</h3>
-               <p className="text-[10px] font-mono text-accent-cyan uppercase mb-6 tracking-widest">Asset Identification Protocol</p>
+               <p className="text-[10px] font-mono text-accent-cyan uppercase mb-6 tracking-widest">{t('housing.identification')}</p>
                
                <div className="aspect-video relative rounded-lg bg-black/40 border border-white/5 mb-6 flex items-center justify-center overflow-hidden">
                   <img src={selectedAsset.image} className="w-1/2 h-auto drop-shadow-2xl" />
                </div>
-
+ 
                <div className="space-y-4 mb-8">
                   <div className="flex justify-between items-center p-3 bg-white/5 rounded-lg border border-white/5">
-                     <span className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">Strategic Bonus</span>
+                     <span className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">{t('housing.bonus')}</span>
                      <span className="text-xs font-bold text-emerald-500">{selectedAsset.bonus}</span>
                   </div>
                   {!unlocked[selectedAsset.id as keyof typeof unlocked] && (
                     <div className="flex justify-between items-center p-3 bg-white/5 rounded-lg border border-white/5">
-                       <span className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">Ownership Cost</span>
+                       <span className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">{t('housing.cost')}</span>
                        <span className="text-xs font-bold text-white uppercase">
-                          {(Object.values(selectedAsset.cost)[0] as number).toLocaleString()} {Object.keys(selectedAsset.cost)[0]}
+                          {(Object.values(selectedAsset.cost)[0] as number).toLocaleString()} {t(`dash.resources.${Object.keys(selectedAsset.cost)[0]}`).toUpperCase()}
                        </span>
                     </div>
                   )}
                </div>
-
+ 
                {unlocked[selectedAsset.id as keyof typeof unlocked] ? (
                  <div className="w-full py-4 bg-emerald-600/20 border border-emerald-500/30 rounded-xl text-center">
-                    <span className="text-[10px] font-black uppercase text-emerald-400 tracking-widest">Asset Authenticated & Active</span>
+                    <span className="text-[10px] font-black uppercase text-emerald-400 tracking-widest">{t('housing.authenticated')}</span>
                  </div>
                ) : (
                  <div className="flex gap-3">
-                   <button onClick={() => setSelectedAsset(null)} className="flex-1 py-3 border border-white/10 rounded-xl text-[10px] font-black uppercase text-zinc-500">Cancel</button>
+                   <button onClick={() => setSelectedAsset(null)} className="flex-1 py-3 border border-white/10 rounded-xl text-[10px] font-black uppercase text-zinc-500">{t('housing.cancel')}</button>
                    <button 
                     disabled={processing}
                     onClick={handleUnlock}
                     className="flex-3 py-3 bg-accent-cyan text-black rounded-xl text-[10px] font-black uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2"
                    >
-                     {processing ? <Loader2 className="w-3 h-3 animate-spin"/> : 'Initialize Acquisition'}
+                     {processing ? <Loader2 className="w-3 h-3 animate-spin"/> : t('housing.initialize')}
                    </button>
                  </div>
                )}
@@ -227,7 +229,7 @@ export default function RealEstatePage() {
           <motion.div initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="fixed inset-x-0 bottom-24 flex justify-center z-[300] px-6">
             <div className="bg-zinc-900 border border-emerald-500/30 p-4 rounded-xl shadow-2xl flex items-start gap-4">
                <div className="p-2 bg-emerald-500/10 rounded-lg"><Info className="w-4 h-4 text-emerald-500" /></div>
-               <div className="flex flex-col"><span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-1">Land Hub Message</span><p className="text-[10px] text-zinc-300 font-medium">{notification}</p></div>
+               <div className="flex flex-col"><span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-1">{t('housing.hub_message')}</span><p className="text-[10px] text-zinc-300 font-medium">{notification}</p></div>
             </div>
           </motion.div>
         )}

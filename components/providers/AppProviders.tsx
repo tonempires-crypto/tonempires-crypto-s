@@ -4,6 +4,20 @@ import { THEME, TonConnectUIProvider } from '@tonconnect/ui-react';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { AudioProvider } from './AudioProvider';
+import '@/lib/i18n';
+import { useTranslation } from 'react-i18next';
+
+function RootLanguageHandler() {
+  const { i18n } = useTranslation();
+
+  useEffect(() => {
+    const lang = i18n.language || 'en';
+    document.documentElement.lang = lang;
+    document.documentElement.dir = (lang === 'ar' || lang === 'he') ? 'rtl' : 'ltr';
+  }, [i18n.language]);
+
+  return null;
+}
 
 export default function AppProviders({ children }: { children: React.ReactNode }) {
   useEffect(() => {
@@ -34,6 +48,7 @@ export default function AppProviders({ children }: { children: React.ReactNode }
       uiPreferences={{ theme: THEME.DARK }}
     >
       <AudioProvider>
+        <RootLanguageHandler />
         {children}
       </AudioProvider>
     </TonConnectUIProvider>

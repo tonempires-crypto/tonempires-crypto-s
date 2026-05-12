@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Factory, Users, TrendingUp, Hammer, Shield, Coins, Plus, ChevronRight, Briefcase } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
+import { useTranslation } from 'react-i18next';
 
 interface CompaniesSectionProps {
   userData: any;
@@ -11,6 +12,7 @@ interface CompaniesSectionProps {
 }
 
 export default function CompaniesSection({ userData, resources }: CompaniesSectionProps) {
+  const { t } = useTranslation();
   const [govCompanies, setGovCompanies] = useState<any[]>([]);
   const [privateCompanies, setPrivateCompanies] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -361,12 +363,12 @@ export default function CompaniesSection({ userData, resources }: CompaniesSecti
     <div className="space-y-6 pb-20">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-black uppercase tracking-tight">Industrial Registry</h2>
-          <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest leading-none">Global Production Chains</p>
+          <h2 className="text-xl font-black uppercase tracking-tight">{t('industry.registry')}</h2>
+          <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest leading-none">{t('industry.global_chains')}</p>
         </div>
         <div className="bg-accent-cyan/10 px-2 py-1 rounded border border-accent-cyan/20 flex items-center gap-2">
           <div className="w-1.5 h-1.5 rounded-full bg-accent-cyan animate-pulse"></div>
-          <span className="text-[10px] font-mono text-accent-cyan uppercase">{regionId.replace('_', ' ')} SECTOR</span>
+          <span className="text-[10px] font-mono text-accent-cyan uppercase">{regionId.replace('_', ' ')} {t('industry.sector')}</span>
         </div>
       </div>
 
@@ -375,9 +377,9 @@ export default function CompaniesSection({ userData, resources }: CompaniesSecti
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-2">
             <Shield className="w-4 h-4 text-accent-cyan" />
-            <h3 className="text-xs font-black uppercase tracking-widest text-white/70">Imperial Infrastructure</h3>
+            <h3 className="text-xs font-black uppercase tracking-widest text-white/70">{t('industry.infra')}</h3>
           </div>
-          <span className="text-[9px] font-mono text-zinc-600 uppercase">State Property</span>
+          <span className="text-[9px] font-mono text-zinc-600 uppercase">{t('industry.state_prop')}</span>
         </div>
 
         <div className="grid grid-cols-1 gap-3">
@@ -401,7 +403,7 @@ export default function CompaniesSection({ userData, resources }: CompaniesSecti
                   </div>
                   <div className="flex flex-col items-end">
                      <div className="flex items-center gap-1">
-                       <span className="text-[9px] font-mono text-zinc-500">LEVEL {company.level}</span>
+                       <span className="text-[9px] font-mono text-zinc-500">{t('industry.level').toUpperCase()} {company.level}</span>
                        {/* Upgrade button only for owners or authorized admins */}
                        {(userData.is_admin || (!company.is_government && company.owner_id === userData.telegram_id)) && (
                          <button 
@@ -422,7 +424,7 @@ export default function CompaniesSection({ userData, resources }: CompaniesSecti
                             ? 'bg-accent-cyan text-black' 
                             : 'bg-zinc-800 text-white hover:bg-white/10 active:scale-95'}`}
                       >
-                        {actionLoading === company.id ? 'PROCESSING...' : 'WORK (6H SHIFT)'}
+                        {actionLoading === company.id ? t('industry.processing') : t('industry.work_shift')}
                       </button>
                   </div>
                 </div>
@@ -440,21 +442,21 @@ export default function CompaniesSection({ userData, resources }: CompaniesSecti
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-2">
             <Briefcase className="w-4 h-4 text-accent-orange" />
-            <h3 className="text-xs font-black uppercase tracking-widest text-white/70">Private Conglomerates</h3>
+            <h3 className="text-xs font-black uppercase tracking-widest text-white/70">{t('industry.private_conglomerates')}</h3>
           </div>
           <button 
             onClick={createPrivateCompany}
             className="flex items-center gap-1 px-3 py-1 bg-accent-orange/10 border border-accent-orange/30 rounded-lg text-accent-orange hover:bg-accent-orange hover:text-black transition-all"
           >
             <Plus className="w-3 h-3" />
-            <span className="text-[9px] font-black uppercase">Found Company</span>
+            <span className="text-[9px] font-black uppercase">{t('industry.found_company')}</span>
           </button>
         </div>
 
         {privateCompanies.length === 0 ? (
           <div className="tech-card p-10 border-dashed border-white/5 flex flex-col items-center justify-center opacity-30">
             <Coins className="w-10 h-10 mb-2" />
-            <p className="text-[10px] font-mono uppercase">Decentralized industrial network offline</p>
+            <p className="text-[10px] font-mono uppercase">{t('industry.offline')}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-3">
@@ -471,7 +473,7 @@ export default function CompaniesSection({ userData, resources }: CompaniesSecti
                     </div>
                   </div>
                   <div className="flex flex-col items-end">
-                     <span className="text-[9px] font-mono text-accent-orange">Lvl {company.level} · {company.resource_type.toUpperCase()}</span>
+                     <span className="text-[9px] font-mono text-accent-orange">{t('industry.level')} {company.level} · {company.resource_type.toUpperCase()}</span>
                      <div className="text-[8px] font-mono text-zinc-500 mt-1 uppercase">Budget: {Math.floor(company.salary_budget || 0)} · Salary: {company.salary_rate || 0}</div>
                      
                      <div className="flex gap-2 mt-2">
@@ -480,7 +482,7 @@ export default function CompaniesSection({ userData, resources }: CompaniesSecti
                            onClick={() => handleManageBudget(company)}
                            className="px-2 py-1.5 rounded-lg border border-accent-orange/30 text-accent-orange text-[9px] font-bold hover:bg-accent-orange/10 transition-all"
                          >
-                           MANAGE
+                           {t('industry.manage').toUpperCase()}
                          </button>
                        )}
                        <button 
@@ -491,7 +493,7 @@ export default function CompaniesSection({ userData, resources }: CompaniesSecti
                             ? 'bg-accent-orange text-black' 
                             : 'bg-zinc-800 text-white hover:bg-white/10 active:scale-95'}`}
                        >
-                         {actionLoading === company.id ? 'SYCHING...' : 'WORK (6H SHIFT)'}
+                         {actionLoading === company.id ? t('industry.processing') : t('industry.work_shift')}
                        </button>
                      </div>
                   </div>
@@ -505,20 +507,20 @@ export default function CompaniesSection({ userData, resources }: CompaniesSecti
       <div className="tech-card p-6 border-white/5 bg-zinc-900/40">
         <h3 className="text-xs font-black uppercase tracking-[0.2em] text-accent-cyan mb-4 flex items-center gap-2">
           <Shield className="w-3 h-3" />
-          Empire Sector Protocol
+          {t('industry.protocol')}
         </h3>
         <div className="space-y-4 text-[10px] font-mono text-zinc-400 uppercase leading-relaxed">
           <p>
-            <span className="text-white font-bold">1. Universal Employment:</span> Every citizen MUST be stationed in exactly ONE industrial sector. Once signed, contracts are binding to prevent neural espionage.
+            <span className="text-white font-bold">{t('industry.rule1_title')}:</span> {t('industry.rule1_desc')}
           </p>
           <p>
-            <span className="text-white font-bold">2. Sovereign Yield:</span> Production from <span className="text-accent-cyan">Imperial Infrastructure</span> is transmitted directly to the National Treasury. Individual workers receive zero direct yield but contribute to the logic of the Hegemony.
+            <span className="text-white font-bold">{t('industry.rule2_title')}:</span> {t('industry.rule2_desc')}
           </p>
           <p>
-            <span className="text-white font-bold">3. Private Conglomerates:</span> Established for 5 TON. Owners receive all yields after a <span className="text-accent-orange">20% Sovereign Tax</span> is automatically deducted for the Empire.
+            <span className="text-white font-bold">{t('industry.rule3_title')}:</span> {t('industry.rule3_desc')}
           </p>
           <p>
-            <span className="text-white font-bold">4. Industrial Scaling:</span> Sectors have 100 efficiency levels. Upgrades require massive resource injections and Imperial Credits. Higher levels provide exponential production boosts.
+            <span className="text-white font-bold">{t('industry.rule4_title')}:</span> {t('industry.rule4_desc')}
           </p>
         </div>
       </div>

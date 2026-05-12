@@ -1,6 +1,7 @@
 'use client';
 
 import { motion } from 'motion/react';
+import { useTranslation } from 'react-i18next';
 
 interface WorldSVGMapProps {
   selectedRegion?: string;
@@ -54,6 +55,16 @@ const DECOR_PATHS = [
 ];
 
 export default function WorldSVGMap({ selectedRegion, onRegionSelect, className = "" }: WorldSVGMapProps) {
+  const { t } = useTranslation();
+
+  const REGION_STRINGS: Record<string, string> = {
+    middle_east: t('regions.middle_east'),
+    africa: t('regions.africa'),
+    europe: t('regions.europe'),
+    asia: t('regions.asia'),
+    east_asia: t('regions.east_asia'),
+  };
+
   return (
     <div className={`relative aspect-[2/1] w-full bg-black/40 rounded-3xl border border-white/5 overflow-hidden group ${className}`}>
       {/* Grid Pattern Background */}
@@ -101,7 +112,7 @@ export default function WorldSVGMap({ selectedRegion, onRegionSelect, className 
               `}
               onClick={() => onRegionSelect?.(region.id)}
             >
-              <title>{region.name}</title>
+              <title>{REGION_STRINGS[region.id] || region.name}</title>
             </motion.path>
           );
         })}
@@ -116,7 +127,7 @@ export default function WorldSVGMap({ selectedRegion, onRegionSelect, className 
               ${selectedRegion === r.id ? 'bg-white/10 border-white/20 text-white' : 'opacity-30 border-transparent text-zinc-500'}
             `}
           >
-            {r.name.toUpperCase()}
+            {(REGION_STRINGS[r.id] || r.name).toUpperCase()}
           </div>
         ))}
       </div>

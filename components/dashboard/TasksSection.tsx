@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useTranslation } from 'react-i18next';
 import { 
   CheckCircle2, 
   ExternalLink, 
@@ -20,7 +21,9 @@ import {
   MessageSquare,
   Zap,
   ChevronRight,
-  AlertCircle
+  AlertCircle,
+  Crown,
+  Wallet
 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 
@@ -30,28 +33,37 @@ interface TasksSectionProps {
   onResourcesUpdate: (newRes: any) => void;
 }
 
-const DAILY_TASKS = [
-  { id: 'retweet_x', title: 'Retweet latest tweet on X', reward: '5 WHT', platform: 'X', icon: Twitter, link: 'https://x.com/Ton_Empires' },
-  { id: 'react_tg', title: 'React the latest post on Telegram', reward: '5 WHT', platform: 'Telegram', icon: Send, link: 'https://t.me/T0NEmpires' },
-  { id: 'react_tiktok', title: 'React the latest post on TikTok', reward: '5 WHT', platform: 'TikTok', icon: Video, link: 'https://www.tiktok.com/@tonempires' },
-  { id: 'repost_insta', title: 'Repost the latest post on Instagram', reward: '5 WHT', platform: 'Instagram', icon: Instagram, link: 'https://www.instagram.com/tonempires/' },
-  { id: 'react_fb', title: 'React the latest Facebook post', reward: '5 WHT', platform: 'Facebook', icon: Facebook, link: 'https://www.facebook.com/profile.php?id=61589243985940' },
-  { id: 'react_wa', title: 'React the latest WhatsApp post', reward: '5 WHT', platform: 'WhatsApp', icon: MessageSquare, link: 'https://whatsapp.com/channel/0029Vb7cgucKrWQmo5dq8J2V' },
-];
-
-const ONE_TIME_TASKS = [
-  { id: 'follow_x', title: 'Follow X', reward: '10 ALL', platform: 'X', icon: Twitter, link: 'https://x.com/Ton_Empires' },
-  { id: 'follow_tg', title: 'Follow Telegram', reward: '10 ALL', platform: 'Telegram', icon: Send, link: 'https://t.me/T0NEmpires' },
-  { id: 'follow_tiktok', title: 'Follow TikTok', reward: '10 ALL', platform: 'TikTok', icon: Video, link: 'https://www.tiktok.com/@tonempires' },
-  { id: 'follow_youtube', title: 'Follow YouTube', reward: '10 ALL', platform: 'YouTube', icon: Youtube, link: 'https://www.youtube.com/@TonEmpires' },
-  { id: 'follow_insta', title: 'Follow Instagram', reward: '10 ALL', platform: 'Instagram', icon: Instagram, link: 'https://www.instagram.com/tonempires/' },
-  { id: 'follow_fb', title: 'Follow Facebook', reward: '10 ALL', platform: 'Facebook', icon: Facebook, link: 'https://www.facebook.com/profile.php?id=61589243985940' },
-  { id: 'follow_wa', title: 'Follow WhatsApp', reward: '10 ALL', platform: 'WhatsApp', icon: MessageSquare, link: 'https://whatsapp.com/channel/0029Vb7cgucKrWQmo5dq8J2V' },
-  { id: 'join_discord', title: 'Join Discord', reward: '10 ALL', platform: 'Discord', icon: Hash, link: 'https://discord.gg/KH2mzsCAD' },
-];
-
 export default function TasksSection({ userData, resources, onResourcesUpdate }: TasksSectionProps) {
+  const { t } = useTranslation();
   const [completedTasks, setCompletedTasks] = useState<string[]>([]);
+
+  const DAILY_TASKS = [
+    { id: 'retweet_x', title: t('tasks.retweet_x'), reward: '10 ALL', platform: 'X', icon: Twitter, link: 'https://x.com/Ton_Empires' },
+    { id: 'react_tg', title: t('tasks.react_tg'), reward: '10 ALL', platform: 'Telegram', icon: Send, link: 'https://t.me/T0NEmpires' },
+    { id: 'react_tiktok', title: t('tasks.react_tiktok'), reward: '10 ALL', platform: 'TikTok', icon: Video, link: 'https://www.tiktok.com/@tonempires' },
+    { id: 'repost_insta', title: t('tasks.repost_insta'), reward: '10 ALL', platform: 'Instagram', icon: Instagram, link: 'https://www.instagram.com/tonempires/' },
+    { id: 'react_fb', title: t('tasks.react_fb'), reward: '10 ALL', platform: 'Facebook', icon: Facebook, link: 'https://www.facebook.com/profile.php?id=61589243985940' },
+    { id: 'react_wa', title: t('tasks.react_wa'), reward: '10 ALL', platform: 'WhatsApp', icon: MessageSquare, link: 'https://whatsapp.com/channel/0029Vb7cgucKrWQmo5dq8J2V' },
+  ];
+
+  const INTERACTIVE_TASKS = [
+    { id: 'daily_login', title: t('tasks.daily_login') || 'Daily Imperial Check-in', reward: '5 WHT', platform: 'Empire', icon: Zap, link: '#' },
+    { id: 'watch_briefing', title: t('tasks.briefing'), reward: '10 ALL', platform: 'YouTube', icon: Play, link: 'https://www.youtube.com/@TonEmpires' },
+  ];
+
+  const ONE_TIME_TASKS = [
+    { id: 'join_empire', title: 'Join the Empire', reward: '20 ALL', platform: 'Protocol', icon: Crown, link: '#' },
+    { id: 'link_wallet', title: t('tasks.link_wallet') || 'Link Imperial Wallet', reward: '50 ALL', platform: 'Vault', icon: Wallet, link: '#' },
+    { id: 'follow_x', title: t('tasks.follow_x'), reward: '20 ALL', platform: 'X', icon: Twitter, link: 'https://x.com/Ton_Empires' },
+    { id: 'follow_tg', title: t('tasks.follow_tg'), reward: '20 ALL', platform: 'Telegram', icon: Send, link: 'https://t.me/T0NEmpires' },
+    { id: 'follow_tiktok', title: t('tasks.follow_tiktok'), reward: '20 ALL', platform: 'TikTok', icon: Video, link: 'https://www.tiktok.com/@tonempires' },
+    { id: 'follow_youtube', title: t('tasks.follow_youtube'), reward: '30 ALL', platform: 'YouTube', icon: Youtube, link: 'https://www.youtube.com/@TonEmpires' },
+    { id: 'follow_insta', title: t('tasks.follow_insta'), reward: '20 ALL', platform: 'Instagram', icon: Instagram, link: 'https://www.instagram.com/tonempires/' },
+    { id: 'follow_fb', title: t('tasks.follow_fb'), reward: '20 ALL', platform: 'Facebook', icon: Facebook, link: 'https://www.facebook.com/profile.php?id=61589243985940' },
+    { id: 'follow_wa', title: t('tasks.follow_wa'), reward: '20 ALL', platform: 'WhatsApp', icon: MessageSquare, link: 'https://whatsapp.com/channel/0029Vb7cgucKrWQmo5dq8J2V' },
+    { id: 'join_discord', title: t('tasks.join_discord'), reward: '50 ALL', platform: 'Discord', icon: Hash, link: 'https://discord.gg/KH2mzsCAD' },
+  ];
+
   const [loading, setLoading] = useState(true);
   const [claiming, setClaiming] = useState<string | null>(null);
 
@@ -63,25 +75,47 @@ export default function TasksSection({ userData, resources, onResourcesUpdate }:
 
   const fetchTaskHistory = async () => {
     try {
-      // Since we might not have a table yet, we'll try to fetch.
-      // If result is empty or error, we fallback gracefully.
       const { data, error } = await supabase
         .from('user_tasks')
         .select('task_id, completed_at')
         .eq('telegram_id', userData.telegram_id);
       
+      let completed: string[] = [];
+
       if (!error && data) {
-        const active = data.filter(t => {
-          const isDaily = DAILY_TASKS.some(dt => dt.id === t.task_id);
+        const now = new Date();
+        const startOfToday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).getTime();
+
+        completed = data.filter(t => {
+          const isDaily = DAILY_TASKS.some(dt => dt.id === t.task_id) || INTERACTIVE_TASKS.some(it => it.id === t.task_id);
           if (!isDaily) return true;
           const completedAt = new Date(t.completed_at).getTime();
-          return (Date.now() - completedAt) < 24 * 60 * 60 * 1000;
+          return completedAt >= startOfToday;
         }).map(t => t.task_id);
-        
-        setCompletedTasks(active);
       }
+
+      // LocalStorage fallback/cache to prevent rapid re-claiming if DB is slow
+      const localCache = localStorage.getItem(`tasks_${userData.telegram_id}`);
+      if (localCache) {
+        const parsed = JSON.parse(localCache);
+        const now = new Date();
+        const startOfToday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).getTime();
+        
+        Object.keys(parsed).forEach(tid => {
+          if (!completed.includes(tid)) {
+            const isDaily = DAILY_TASKS.some(dt => dt.id === tid) || INTERACTIVE_TASKS.some(it => it.id === tid);
+            if (!isDaily) {
+              completed.push(tid);
+            } else if (parsed[tid] >= startOfToday) {
+              completed.push(tid);
+            }
+          }
+        });
+      }
+      
+      setCompletedTasks(completed);
     } catch (e) {
-      console.warn("Task history fetch failed, table might be missing. Using session state.");
+      console.warn("Task history fetch failed", e);
     } finally {
       setLoading(false);
     }
@@ -89,29 +123,42 @@ export default function TasksSection({ userData, resources, onResourcesUpdate }:
 
   const handleTaskClick = async (task: any) => {
     if (completedTasks.includes(task.id)) return;
-    if (task.link === '#' || task.link === 'soon') {
-      alert("Tactical connection pending. This channel will open soon.");
-      return;
+    
+    // Auto-verify Link Wallet
+    if (task.id === 'link_wallet') {
+      // Wallet check logic would go here, for now we let them claim if they try
+    } else if (task.id !== 'daily_login') {
+      if (task.link === '#' || task.link === 'soon') {
+        alert("Tactical connection pending. This channel will open soon.");
+        return;
+      }
+      window.open(task.link, '_blank');
     }
-
-    // Interactive step: User must follow link
-    window.open(task.link, '_blank');
 
     setClaiming(task.id);
     
     // Simulate verification delay
     setTimeout(async () => {
       try {
-        const isDaily = DAILY_TASKS.some(dt => dt.id === task.id);
+        const isDaily = DAILY_TASKS.some(dt => dt.id === task.id) || INTERACTIVE_TASKS.some(it => it.id === task.id);
         const newRes = { ...resources };
         
+        // Rewards logic
         if (isDaily) {
-          newRes.wheat = (newRes.wheat || 0) + 5;
+          if (task.reward.includes('WHT')) newRes.wheat = (newRes.wheat || 0) + parseInt(task.reward);
+          else if (task.reward.includes('ALL')) {
+             const amount = parseInt(task.reward) || 10;
+             newRes.oil = (newRes.oil || 0) + amount;
+             newRes.gold = (newRes.gold || 0) + amount;
+             newRes.iron = (newRes.iron || 0) + amount;
+             newRes.wheat = (newRes.wheat || 0) + amount;
+          }
         } else {
-          newRes.oil = (newRes.oil || 0) + 10;
-          newRes.gold = (newRes.gold || 0) + 10;
-          newRes.iron = (newRes.iron || 0) + 10;
-          newRes.wheat = (newRes.wheat || 0) + 10;
+          const amount = parseInt(task.reward) || 10;
+          newRes.oil = (newRes.oil || 0) + amount;
+          newRes.gold = (newRes.gold || 0) + amount;
+          newRes.iron = (newRes.iron || 0) + amount;
+          newRes.wheat = (newRes.wheat || 0) + amount;
         }
 
         // 1. Update Resources
@@ -127,14 +174,24 @@ export default function TasksSection({ userData, resources, onResourcesUpdate }:
 
         if (resError) throw resError;
 
-        // 2. Track Completion (Silent fail if table missing, but update UI anyway)
-        await supabase
+        // 2. Track Completion
+        const timestamp = new Date().toISOString();
+        const { error: taskError } = await supabase
           .from('user_tasks')
           .upsert({
             telegram_id: userData.telegram_id,
             task_id: task.id,
-            completed_at: new Date().toISOString()
+            completed_at: timestamp
           }, { onConflict: 'telegram_id,task_id' });
+
+        if (taskError) {
+          console.error("Task log failed:", taskError);
+        }
+
+        // Update local cache
+        const localCache = JSON.parse(localStorage.getItem(`tasks_${userData.telegram_id}`) || '{}');
+        localCache[task.id] = new Date().getTime();
+        localStorage.setItem(`tasks_${userData.telegram_id}`, JSON.stringify(localCache));
 
         setCompletedTasks(prev => [...prev, task.id]);
         onResourcesUpdate(newRes);
@@ -204,12 +261,12 @@ export default function TasksSection({ userData, resources, onResourcesUpdate }:
     <div className="space-y-8 pb-32">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-black uppercase tracking-tight">Mission Hub</h2>
-          <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest">Imperial Loyalty Rewards</p>
+          <h2 className="text-xl font-black uppercase tracking-tight">{t('tasks.hub')}</h2>
+          <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest">{t('tasks.rewards')}</p>
         </div>
         <div className="px-3 py-1.5 bg-accent-cyan/10 border border-accent-cyan/30 rounded-lg flex items-center gap-2">
           <Zap className="w-3 h-3 text-accent-cyan animate-pulse" />
-          <span className="text-[10px] font-bold text-accent-cyan uppercase tracking-tighter">Tasks Online</span>
+          <span className="text-[10px] font-bold text-accent-cyan uppercase tracking-tighter">{t('tasks.online')}</span>
         </div>
       </div>
 
@@ -217,21 +274,10 @@ export default function TasksSection({ userData, resources, onResourcesUpdate }:
       <section className="space-y-4">
         <div className="flex items-center gap-2 px-1">
           <Play className="w-3 h-3 text-accent-orange" />
-          <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Interactive</h3>
+          <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-400">{t('tasks.interactive')}</h3>
         </div>
-        <div className="tech-card p-4 border-accent-orange/20 bg-accent-orange/5 relative overflow-hidden group opacity-80 cursor-not-allowed">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-zinc-900 border border-white/5 flex items-center justify-center text-accent-orange">
-                <Play className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="font-bold text-xs uppercase tracking-tight">Watch Tactical Briefing</h3>
-                <span className="text-[9px] font-mono text-zinc-500 uppercase">Coming Soon (ADS)</span>
-              </div>
-            </div>
-            <Clock className="w-4 h-4 text-accent-orange/30" />
-          </div>
+        <div className="space-y-2">
+          {INTERACTIVE_TASKS.map((task, i) => renderTask(task, i))}
         </div>
       </section>
 
@@ -240,9 +286,9 @@ export default function TasksSection({ userData, resources, onResourcesUpdate }:
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-2">
             <Clock className="w-3 h-3 text-accent-cyan" />
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Daily Objectives</h3>
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-400">{t('tasks.daily')}</h3>
           </div>
-          <span className="text-[8px] font-mono text-zinc-600 uppercase">Resets every 24H</span>
+          <span className="text-[8px] font-mono text-zinc-600 uppercase">{t('tasks.resets')}</span>
         </div>
         <div className="space-y-2">
           {DAILY_TASKS.map((task, i) => renderTask(task, i))}
@@ -253,7 +299,7 @@ export default function TasksSection({ userData, resources, onResourcesUpdate }:
       <section className="space-y-4">
         <div className="flex items-center gap-2 px-1">
           <Trophy className="w-3 h-3 text-accent-gold text-yellow-500" />
-          <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Imperial Milestones</h3>
+          <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-400">{t('tasks.milestones')}</h3>
         </div>
         <div className="space-y-2">
           {ONE_TIME_TASKS.map((task, i) => renderTask(task, i))}
@@ -265,9 +311,9 @@ export default function TasksSection({ userData, resources, onResourcesUpdate }:
           <Gift className="w-6 h-6 text-accent-cyan" />
         </div>
         <div>
-          <h4 className="text-xs font-bold uppercase mb-1">Loyalty Protocol</h4>
+          <h4 className="text-xs font-bold uppercase mb-1">{t('tasks.loyalty_protocol')}</h4>
           <p className="text-[9px] font-mono text-zinc-500 uppercase leading-relaxed">
-            Imperial tasks are manually verified by the Sovereign Node. Attempting to bypass verification may result in resource forfeiture.
+            {t('tasks.loyalty_desc')}
           </p>
         </div>
       </div>

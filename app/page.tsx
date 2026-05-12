@@ -17,8 +17,10 @@ import GovernmentSection from '@/components/dashboard/GovernmentSection';
 import CompaniesSection from '@/components/dashboard/CompaniesSection';
 import SettingsMenu from '@/components/dashboard/SettingsMenu';
 import WorldSVGMap from '@/components/dashboard/WorldSVGMap';
+import { useTranslation } from 'react-i18next';
 
 export default function Dashboard() {
+  const { t } = useTranslation();
   const [userName, setUserName] = useState('jdoe_trading');
   const [citizenId, setCitizenId] = useState('8421');
   const [fullUserId, setFullUserId] = useState<string | number>('');
@@ -66,16 +68,16 @@ export default function Dashboard() {
 
       if (!updateError) {
         setResources(prev => ({ ...prev, ton: newBalance }));
-        alert(`SUCCESS: ${amount} TON credited to your Imperial Vault.`);
+        alert(t('dash.deposit_success', { amount }));
       } else {
         console.error("DB Sync Error:", updateError);
-        alert("Transaction confirmed on-chain, but registry sync failed. Please refresh.");
+        alert(t('dash.sync_failed'));
       }
     } catch (e) {
       console.error("Deposit failed", e);
       // Don't alert on user cancel, only on real errors
       if (e instanceof Error && !e.message.includes('User rejected')) {
-        alert("Transfer Error: The Treasury could not process the request.");
+        alert(t('dash.transfer_error'));
       }
     }
   };
@@ -289,7 +291,7 @@ export default function Dashboard() {
     } else {
       console.error("CRITICAL: Failed to save region selection to Supabase", error);
       // More professional error message
-      alert("Imperial Registry Error: The database refused the update. Please ensure the 'users_region_check' constraint is removed in Supabase SQL Editor.");
+      alert(t('dash.registry_error'));
     }
   };
 
@@ -312,7 +314,7 @@ export default function Dashboard() {
       <Link href="/news" className="absolute top-4 left-0 z-[60]">
         <div className="bg-red-600 hover:bg-red-500 text-white text-[9px] font-black uppercase tracking-[0.1em] px-3 py-1 rounded-r shadow-[0_0_15px_rgba(220,38,38,0.4)] transition-all active:scale-95 flex items-center gap-1.5 border-y border-r border-white/10">
           <div className="w-1 h-1 rounded-full bg-white animate-pulse" />
-          NEWS
+          {t('nav.news')}
         </div>
       </Link>
 
@@ -333,14 +335,14 @@ export default function Dashboard() {
                   )}
                 </div>
                 <div className="flex flex-col min-w-0">
-                  <span className="text-[10px] text-gray-500 font-mono uppercase tracking-widest leading-none mb-1">Citizen #{citizenId}</span>
+                  <span className="text-[10px] text-gray-500 font-mono uppercase tracking-widest leading-none mb-1">{t('dash.citizen_num')} #{citizenId}</span>
                   <span className="text-sm font-semibold tracking-tight truncate">@{userName || 'Citizen'}</span>
                 </div>
               </button>
               <div className="flex items-center gap-2">
                 <div className="bg-[#151518] border border-border-main px-3 py-1.5 rounded-xl flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-accent-cyan animate-pulse"></div>
-                  <span className="text-[10px] uppercase font-bold tracking-tighter">Live Network</span>
+                  <span className="text-[10px] uppercase font-bold tracking-tighter">{t('dash.live_network')}</span>
                 </div>
                 <SettingsMenu />
               </div>
@@ -358,7 +360,7 @@ export default function Dashboard() {
 
               <div className="flex justify-between items-end relative z-10">
                 <div className="flex flex-col text-left">
-                  <span className="text-[10px] text-gray-500 uppercase tracking-widest font-mono mb-1">Personal Vault (Reserved)</span>
+                  <span className="text-[10px] text-gray-500 uppercase tracking-widest font-mono mb-1">{t('dash.personal_vault')}</span>
                   <span className="text-2xl font-black text-accent-orange tracking-tight">
                     {resources.ton.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TON
                   </span>
@@ -369,7 +371,7 @@ export default function Dashboard() {
                     className="bg-accent-orange text-black text-[10px] font-bold px-3 py-2 rounded-lg hover:brightness-110 active:scale-90 transition-all shadow-[0_0_15px_rgba(255,145,0,0.3)] flex items-center gap-1"
                   >
                     <CreditCard className="w-3 h-3" />
-                    DEPOSIT
+                    {t('dash.deposit').toUpperCase()}
                   </button>
                 </div>
               </div>
@@ -377,25 +379,25 @@ export default function Dashboard() {
               {/* Resource Items (Stored in DB) */}
               <div className="grid grid-cols-4 gap-2 pt-4 border-t border-border-main">
                 <div className="text-center group">
-                  <div className="text-[9px] text-gray-600 mb-1">OIL</div>
+                  <div className="text-[9px] text-gray-600 mb-1">{t('dash.resources.oil').toUpperCase()}</div>
                   <div className={`text-xs font-mono ${(resources.oil || 0) > 0 ? 'text-accent-cyan' : 'text-zinc-700'}`}>
                     {(resources.oil || 0).toLocaleString()}
                   </div>
                 </div>
                 <div className="text-center group">
-                  <div className="text-[9px] text-gray-600 mb-1">GOLD</div>
+                  <div className="text-[9px] text-gray-600 mb-1">{t('dash.resources.gold').toUpperCase()}</div>
                   <div className={`text-xs font-mono ${(resources.gold || 0) > 0 ? 'text-accent-cyan' : 'text-zinc-700'}`}>
                     {(resources.gold || 0).toLocaleString()}
                   </div>
                 </div>
                 <div className="text-center group">
-                  <div className="text-[9px] text-gray-600 mb-1">IRON</div>
+                  <div className="text-[9px] text-gray-600 mb-1">{t('dash.resources.iron').toUpperCase()}</div>
                   <div className={`text-xs font-mono ${(resources.iron || 0) > 0 ? 'text-accent-cyan' : 'text-zinc-700'}`}>
                     {(resources.iron || 0).toLocaleString()}
                   </div>
                 </div>
                 <div className="text-center group">
-                  <div className="text-[9px] text-gray-600 mb-1">WHEAT</div>
+                  <div className="text-[9px] text-gray-600 mb-1">{t('dash.resources.wheat').toUpperCase()}</div>
                   <div className={`text-xs font-mono ${(resources.wheat || 0) > 0 ? 'text-accent-cyan' : 'text-zinc-700'}`}>
                     {(resources.wheat || 0).toLocaleString()}
                   </div>
@@ -406,7 +408,7 @@ export default function Dashboard() {
             {/* Strategic Hint */}
             <div className="p-3 bg-accent-cyan/5 border border-accent-cyan/20 rounded-xl">
               <p className="text-[10px] text-accent-cyan italic text-center">
-                Citizens stationed in Companies produce resources for the { (userData?.region || 'Empire').replace('_', ' ').toUpperCase() } Treasury.
+                {t('dash.hint')}
               </p>
             </div>
 
@@ -414,8 +416,8 @@ export default function Dashboard() {
               {/* Market Quotations */}
               <section className="space-y-4">
                 <div className="flex justify-between items-center">
-                  <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500">Economic Zones</h3>
-                  <button onClick={() => { setActiveTab('market'); triggerHaptic(); }} className="text-[10px] text-accent-cyan font-mono opacity-80 hover:opacity-100 transition-opacity">VIEW ALL</button>
+                  <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500">{t('dash.zones')}</h3>
+                  <button onClick={() => { setActiveTab('market'); triggerHaptic(); }} className="text-[10px] text-accent-cyan font-mono opacity-80 hover:opacity-100 transition-opacity">{t('dash.view_all').toUpperCase()}</button>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-3">
@@ -444,7 +446,7 @@ export default function Dashboard() {
                     <>
                       <div className="flex flex-col">
                         <div className="text-[9px] text-gray-500 font-mono mb-1">
-                          {regionalMarketData.find(r => r.id === (userData?.region || 'middle_east'))?.currency} - CURRENT SECTOR
+                          {regionalMarketData.find(r => r.id === (userData?.region || 'middle_east'))?.currency} - {t('dash.current_sector')}
                         </div>
                         <div className="text-lg font-bold">
                           {regionalMarketData.find(r => r.id === (userData?.region || 'middle_east'))?.price.toFixed(4)} TON
@@ -459,7 +461,7 @@ export default function Dashboard() {
                       </div>
                     </>
                   ) : (
-                    <div className="text-[10px] text-zinc-600 font-mono italic">Synchronizing tactical data...</div>
+                    <div className="text-[10px] text-zinc-600 font-mono italic">{t('dash.syncing')}</div>
                   )}
                 </div>
               </section>
@@ -467,12 +469,12 @@ export default function Dashboard() {
             {/* Strategic Map View */}
             <section className="space-y-4 pb-8">
               <div className="flex justify-between items-center">
-                <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500">Strategic Map</h3>
+                <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500">{t('dash.map')}</h3>
                 <button 
                   onClick={() => { setActiveTab('economy'); triggerHaptic(); }}
                   className="text-[10px] text-accent-cyan font-mono uppercase tracking-widest hover:brightness-125 transition-all"
                 >
-                  Regional Intel
+                  {t('dash.intel')}
                 </button>
               </div>
               <WorldSVGMap 
@@ -529,7 +531,7 @@ export default function Dashboard() {
         ) : activeTab === 'economy' ? (
           <RegionEconomySection regionId={userData?.region || 'middle_east'} />
         ) : (
-          <div className="flex items-center justify-center h-full text-zinc-500 font-mono text-xs">MODULE UNDER CONSTRUCTION</div>
+          <div className="flex items-center justify-center h-full text-zinc-500 font-mono text-xs">{t('dash.under_construction')}</div>
         )}
       </div>
 
@@ -540,14 +542,14 @@ export default function Dashboard() {
           className={`group flex flex-col items-center gap-1 transition-all active:scale-90 ${activeTab === 'dash' ? 'text-accent-cyan' : 'text-zinc-500'}`}
         >
           <div className={`w-5 h-5 rounded-sm transition-all duration-300 ${activeTab === 'dash' ? 'bg-accent-cyan shadow-[0_0_15px_rgba(0,255,209,0.6)]' : 'border border-zinc-600'}`}></div>
-          <span className="text-[9px] font-bold tracking-tighter">DASH</span>
+          <span className="text-[9px] font-bold tracking-tighter uppercase">{t('nav.dash')}</span>
         </button>
         <button 
           onClick={() => { setActiveTab('market'); triggerHaptic(); }}
           className={`group flex flex-col items-center gap-1 transition-all active:scale-90 ${activeTab === 'market' ? 'text-accent-cyan' : 'text-zinc-500'}`}
         >
           <div className={`w-5 h-5 rounded-sm transition-all duration-300 ${activeTab === 'market' ? 'bg-accent-cyan shadow-[0_0_15px_rgba(0,255,209,0.6)]' : 'border border-zinc-600'}`}></div>
-          <span className="text-[9px] font-bold tracking-tighter">MARKET</span>
+          <span className="text-[9px] font-bold tracking-tighter uppercase">{t('nav.market')}</span>
         </button>
         <button 
           onClick={() => { setActiveTab('companies'); triggerHaptic(); }}
@@ -556,35 +558,35 @@ export default function Dashboard() {
           <div className={`w-5 h-5 rounded-sm transition-all duration-300 ${activeTab === 'companies' ? 'bg-accent-cyan shadow-[0_0_15px_rgba(0,255,209,0.6)]' : 'border border-zinc-600'}`}>
             <Factory className={`w-3 h-3 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 ${activeTab === 'companies' ? 'text-black' : 'text-zinc-500'}`} />
           </div>
-          <span className="text-[9px] font-bold tracking-tighter uppercase whitespace-nowrap">Industry</span>
+          <span className="text-[9px] font-bold tracking-tighter uppercase whitespace-nowrap">{t('nav.industry')}</span>
         </button>
         <button 
           onClick={() => { setActiveTab('gov'); triggerHaptic(); }}
           className={`group flex flex-col items-center gap-1 transition-all active:scale-90 ${activeTab === 'gov' ? 'text-accent-cyan' : 'text-zinc-500'}`}
         >
           <div className={`w-5 h-5 rounded-sm transition-all duration-300 ${activeTab === 'gov' ? 'bg-accent-cyan shadow-[0_0_15px_rgba(0,255,209,0.6)]' : 'border border-zinc-600'}`}></div>
-          <span className="text-[9px] font-bold tracking-tighter">EMPIRE</span>
+          <span className="text-[9px] font-bold tracking-tighter uppercase">{t('nav.empire')}</span>
         </button>
         <button 
           onClick={() => { setActiveTab('trade'); triggerHaptic(); }}
           className={`group flex flex-col items-center gap-1 transition-all active:scale-90 ${activeTab === 'trade' ? 'text-accent-cyan' : 'text-zinc-500'}`}
         >
           <div className={`w-5 h-5 rounded-sm transition-all duration-300 ${activeTab === 'trade' ? 'bg-accent-cyan shadow-[0_0_15px_rgba(0,255,209,0.6)]' : 'border border-zinc-600'}`}></div>
-          <span className="text-[9px] font-bold tracking-tighter">TRADE</span>
+          <span className="text-[9px] font-bold tracking-tighter uppercase">{t('nav.trade')}</span>
         </button>
         <button 
           onClick={() => { setActiveTab('tasks'); triggerHaptic(); }}
           className={`group flex flex-col items-center gap-1 transition-all active:scale-90 ${activeTab === 'tasks' ? 'text-accent-cyan' : 'text-zinc-500'}`}
         >
           <div className={`w-5 h-5 rounded-sm transition-all duration-300 ${activeTab === 'tasks' ? 'bg-accent-cyan shadow-[0_0_15px_rgba(0,255,209,0.6)]' : 'border border-zinc-600'}`}></div>
-          <span className="text-[9px] font-bold tracking-tighter">TASKS</span>
+          <span className="text-[9px] font-bold tracking-tighter uppercase">{t('nav.tasks')}</span>
         </button>
         <button 
           onClick={() => { setActiveTab('invite'); triggerHaptic(); }}
           className={`group flex flex-col items-center gap-1 transition-all active:scale-90 ${activeTab === 'invite' ? 'text-accent-cyan' : 'text-zinc-500'}`}
         >
           <div className={`w-5 h-5 rounded-sm transition-all duration-300 ${activeTab === 'invite' ? 'bg-accent-cyan shadow-[0_0_15px_rgba(0,255,209,0.6)]' : 'border border-zinc-600'}`}></div>
-          <span className="text-[9px] font-bold tracking-tighter">INVITE</span>
+          <span className="text-[9px] font-bold tracking-tighter uppercase">{t('nav.invite')}</span>
         </button>
       </nav>
     </div>

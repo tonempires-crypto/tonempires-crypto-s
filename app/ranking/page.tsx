@@ -5,8 +5,10 @@ import { ArrowLeft, Trophy, Users, Shield, Sword, Loader2, Zap, Crown, Star, Glo
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
+import { useTranslation } from 'react-i18next';
 
 export default function RankingPage() {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [activeMode, setActiveMode] = useState<'individual' | 'empire'>('individual');
   const [rankings, setRankings] = useState<any[]>([]);
@@ -175,11 +177,11 @@ export default function RankingPage() {
               <span className={`text-sm font-black uppercase tracking-tight italic flex items-center gap-2
                 ${isStickyUser ? 'text-black' : 'text-white'}`}>
                 {item.username}
-                {isUser && <span className="text-[7px] bg-accent-cyan text-black px-1.5 py-0.5 rounded-full not-italic font-black">YOU</span>}
+                {isUser && <span className="text-[7px] bg-accent-cyan text-black px-1.5 py-0.5 rounded-full not-italic font-black">{t('ranking.you')}</span>}
               </span>
               <span className={`text-[9px] font-mono uppercase tracking-tighter
                 ${isStickyUser ? 'text-black/60' : 'text-zinc-500'}`}>
-                {item.region?.replace('_', ' ') || 'UNALIGNED'} SECTOR
+                {item.region?.replace('_', ' ') || 'UNALIGNED'} {t('ranking.sector')}
               </span>
             </div>
           </div>
@@ -194,7 +196,7 @@ export default function RankingPage() {
           </div>
           <span className={`text-[8px] font-mono uppercase tracking-widest leading-none mt-1
             ${isStickyUser ? 'text-black/60' : 'text-zinc-500'}`}>
-            Combat Power
+            {t('ranking.combat_power')}
           </span>
         </div>
 
@@ -250,7 +252,7 @@ export default function RankingPage() {
                 {Math.floor(region.score / 1000).toLocaleString()}
               </span>
             </div>
-            <span className="text-[8px] font-mono text-zinc-600 uppercase tracking-widest leading-none mt-1">Status Level</span>
+            <span className="text-[8px] font-mono text-zinc-600 uppercase tracking-widest leading-none mt-1">{t('ranking.status_level')}</span>
           </div>
         </div>
 
@@ -286,8 +288,8 @@ export default function RankingPage() {
               <ArrowLeft className="w-5 h-5 text-white" />
             </Link>
             <div className="text-right">
-              <h1 className="text-[10px] font-black uppercase tracking-[0.3em] text-accent-cyan">Imperial Registry</h1>
-              <span className="text-[8px] font-mono text-zinc-500 uppercase">Sovereign Performance Data</span>
+              <h1 className="text-[10px] font-black uppercase tracking-[0.3em] text-accent-cyan">{t('ranking.title')}</h1>
+              <span className="text-[8px] font-mono text-zinc-500 uppercase">{t('ranking.subtitle')}</span>
             </div>
           </div>
 
@@ -299,7 +301,7 @@ export default function RankingPage() {
                 ${activeMode === 'individual' ? 'bg-accent-cyan text-black shadow-lg' : 'text-zinc-500 hover:text-white'}`}
             >
               <Users className="w-3.5 h-3.5" />
-              Players
+              {t('ranking.players')}
             </button>
             <button 
               onClick={() => setActiveMode('empire')}
@@ -307,7 +309,7 @@ export default function RankingPage() {
                 ${activeMode === 'empire' ? 'bg-accent-cyan text-black shadow-lg' : 'text-zinc-500 hover:text-white'}`}
             >
               <Globe className="w-3.5 h-3.5" />
-              Empires
+              {t('ranking.empires')}
             </button>
           </div>
         </div>
@@ -316,7 +318,7 @@ export default function RankingPage() {
           {loading ? (
             <div className="flex flex-col items-center justify-center h-full gap-4">
               <Loader2 className="w-8 h-8 text-accent-cyan animate-spin" />
-              <p className="text-[10px] font-mono text-zinc-500 uppercase animate-pulse">Synchronizing Data...</p>
+              <p className="text-[10px] font-mono text-zinc-500 uppercase animate-pulse">{t('ranking.syncing')}</p>
             </div>
           ) : (
             <>
@@ -324,12 +326,12 @@ export default function RankingPage() {
                 <div className="flex items-center gap-2">
                   <Trophy className="w-4 h-4 text-accent-cyan" />
                   <span className="text-xs font-black uppercase tracking-widest text-white/80">
-                    {activeMode === 'individual' ? 'Global Top 50' : 'Continental Order'}
+                    {activeMode === 'individual' ? t('ranking.top_50') : t('ranking.continental')}
                   </span>
                 </div>
                 <div className="flex items-center gap-2 text-[9px] font-mono text-zinc-600 uppercase">
                   <Zap className="w-3 h-3 text-yellow-500" />
-                  Live Sync
+                  {t('ranking.live_sync')}
                 </div>
               </div>
 

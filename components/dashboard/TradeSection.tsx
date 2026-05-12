@@ -5,6 +5,7 @@ import { motion } from 'motion/react';
 import { ArrowLeftRight, ShieldCheck, Box, RefreshCcw, Landmark, Coins } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { getGlobalMarketPrices } from '@/lib/marketUtils';
+import { useTranslation } from 'react-i18next';
 
 interface TradeSectionProps {
   userData: any;
@@ -13,6 +14,7 @@ interface TradeSectionProps {
 }
 
 export default function TradeSection({ userData, resources, onTradeSuccess }: TradeSectionProps) {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'swap'|'p2p'>('swap');
   const [swapDirection, setSwapDirection] = useState<'ton_to_local' | 'local_to_ton'>('ton_to_local');
   const [selectedRes, setSelectedRes] = useState('oil');
@@ -255,21 +257,21 @@ export default function TradeSection({ userData, resources, onTradeSuccess }: Tr
     <div className="space-y-6 pb-20">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-black uppercase tracking-tight">Trade Hub</h2>
-          <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest text-zinc-500">Secure Sovereign Logistics</p>
+          <h2 className="text-xl font-black uppercase tracking-tight">{t('trade.hub')}</h2>
+          <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest text-zinc-500">{t('trade.safe_logistics')}</p>
         </div>
         <div className="flex bg-zinc-900 border border-white/5 rounded-lg p-0.5">
           <button 
             onClick={() => setActiveTab('swap')}
             className={`px-3 py-1 text-[9px] font-bold rounded-md transition-all ${activeTab === 'swap' ? 'bg-accent-cyan text-black' : 'text-zinc-500'}`}
           >
-            QUICK SWAP
+            {t('trade.quick_swap')}
           </button>
           <button 
             onClick={() => setActiveTab('p2p')}
             className={`px-3 py-1 text-[9px] font-bold rounded-md transition-all ${activeTab === 'p2p' ? 'bg-accent-cyan text-black' : 'text-zinc-500'}`}
           >
-            P2P MARKET
+            {t('trade.p2p_market')}
           </button>
         </div>
       </div>
@@ -294,7 +296,7 @@ export default function TradeSection({ userData, resources, onTradeSuccess }: Tr
 
           <div className="space-y-4">
             <div className="flex justify-between items-end px-1">
-              <span className="text-[10px] font-mono text-zinc-500 uppercase">Input Amount</span>
+              <span className="text-[10px] font-mono text-zinc-500 uppercase">{t('trade.input_amount')}</span>
               <span className="text-[10px] font-mono text-accent-cyan uppercase">
                 Bal: {swapDirection === 'ton_to_local' ? resources.ton?.toFixed(4) : 
                       resources.localCurrency?.toFixed(2)}
@@ -322,7 +324,7 @@ export default function TradeSection({ userData, resources, onTradeSuccess }: Tr
 
           <div className="space-y-4">
             <div className="flex justify-between items-end px-1">
-              <span className="text-[10px] font-mono text-zinc-500 uppercase">Estimated Recovery</span>
+              <span className="text-[10px] font-mono text-zinc-500 uppercase">{t('trade.est_recovery')}</span>
               <span className="text-[10px] font-mono text-accent-cyan uppercase">
                 Rate: {swapDirection === 'ton_to_local' ? (1/getExchangeRate()).toFixed(4) + ' L/T' : 
                        getExchangeRate().toFixed(4) + ' T/L'}
@@ -347,27 +349,27 @@ export default function TradeSection({ userData, resources, onTradeSuccess }: Tr
             className={`w-full py-4 rounded-xl font-black uppercase text-sm tracking-widest transition-all active:scale-95 shadow-[0_0_30px_rgba(0,255,209,0.2)]
               ${loading ? 'bg-zinc-800 text-zinc-600' : 'bg-accent-cyan text-black hover:brightness-110'}`}
           >
-            {loading ? 'CLEARING TRANSACTION...' : 'EXECUTE CONTRACT'}
+            {loading ? t('trade.clearing') : t('trade.execute_contract')}
           </button>
         </div>
       ) : (
         <div className="space-y-6">
           {/* CREATE SELL ORDER */}
           <div className="tech-card bg-zinc-900/50 p-5 border-white/5 space-y-4">
-            <h3 className="text-[10px] font-black uppercase tracking-tighter text-accent-cyan mb-2">Initialize Sell Contract</h3>
+            <h3 className="text-[10px] font-black uppercase tracking-tighter text-accent-cyan mb-2">{t('trade.init_sell')}</h3>
             
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <span className="text-[9px] font-mono text-zinc-500 uppercase px-1">Resource</span>
+                <span className="text-[9px] font-mono text-zinc-500 uppercase px-1">{t('nav.resources')}</span>
                 <select 
                   value={selectedRes}
                   onChange={(e) => setSelectedRes(e.target.value)}
                   className="w-full bg-black/40 border border-white/5 rounded-lg h-10 px-2 text-[10px] font-bold uppercase text-white outline-none"
                 >
-                  <option value="oil">OIL</option>
-                  <option value="gold">GOLD</option>
-                  <option value="iron">IRON</option>
-                  <option value="wheat">WHEAT</option>
+                  <option value="oil">{t('dash.resources.oil').toUpperCase()}</option>
+                  <option value="gold">{t('dash.resources.gold').toUpperCase()}</option>
+                  <option value="iron">{t('dash.resources.iron').toUpperCase()}</option>
+                  <option value="wheat">{t('dash.resources.wheat').toUpperCase()}</option>
                 </select>
               </div>
               <div className="space-y-2">
@@ -402,14 +404,14 @@ export default function TradeSection({ userData, resources, onTradeSuccess }: Tr
               disabled={loading || !sellAmount}
               className="w-full py-3 bg-zinc-800 hover:bg-white/5 text-white border border-white/10 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all"
             >
-              Post to Global Exchange
+              {t('trade.post_exchange')}
             </button>
           </div>
 
           {/* GLOBAL MARKET FEED */}
           <div className="space-y-3">
             <div className="flex items-center justify-between px-1">
-              <h3 className="text-[10px] font-black uppercase text-zinc-400">Global Feed</h3>
+              <h3 className="text-[10px] font-black uppercase text-zinc-400">{t('trade.global_feed')}</h3>
               <div className="flex items-center gap-1">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                 <span className="text-[8px] font-mono text-zinc-500 uppercase">Live Relays</span>
@@ -419,7 +421,7 @@ export default function TradeSection({ userData, resources, onTradeSuccess }: Tr
             {marketOrders.length === 0 ? (
               <div className="tech-card p-10 flex flex-col items-center justify-center border-dashed border-white/5 grayscale">
                 <Box className="w-6 h-6 text-zinc-700 mb-2" />
-                <span className="text-[9px] font-mono text-zinc-600 uppercase">No active consignments</span>
+                <span className="text-[9px] font-mono text-zinc-600 uppercase">{t('trade.no_consignments')}</span>
               </div>
             ) : (
               <div className="space-y-2">
@@ -443,14 +445,14 @@ export default function TradeSection({ userData, resources, onTradeSuccess }: Tr
                         onClick={() => handleCancelOrder(order.id, order.amount, order.resource_type)}
                         className="px-3 py-2 bg-red-950/30 border border-red-500/20 text-red-500 text-[9px] font-black rounded-lg uppercase"
                       >
-                        Recall
+                        {t('trade.recall')}
                       </button>
                     ) : (
                       <button 
                         onClick={() => handleBuyOrder(order)}
                         className="px-4 py-2 bg-accent-cyan text-black text-[9px] font-black rounded-lg uppercase shadow-[0_0_15px_rgba(0,255,209,0.2)]"
                       >
-                        Buy
+                        {t('trade.buy')}
                       </button>
                     )}
                   </div>
@@ -464,11 +466,11 @@ export default function TradeSection({ userData, resources, onTradeSuccess }: Tr
       <div className="grid grid-cols-2 gap-3">
         <div className="bento-card p-4 flex flex-col gap-1 items-center justify-center border-white/5">
           <Landmark className="w-4 h-4 text-zinc-600" />
-          <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest">Sovereign Vault</span>
+          <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest">{t('dash.personal_vault').split(' (')[0]}</span>
         </div>
         <div className="bento-card p-4 flex flex-col gap-1 items-center justify-center border-white/5">
            <Coins className="w-4 h-4 text-zinc-600" />
-           <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest">{userData?.region?.replace('_', ' ')} Branch</span>
+           <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest">{userData?.region?.replace('_', ' ')} {t('trade.branch')}</span>
         </div>
       </div>
     </div>

@@ -3,8 +3,10 @@
 import { motion } from 'motion/react';
 import { ArrowLeft, Bell, ChevronRight, Newspaper, Zap } from 'lucide-react';
 import Link from 'next/link';
+import { useTranslation } from 'react-i18next';
 
 export default function NewsPage() {
+  const { t } = useTranslation();
   const updates = [
     {
       id: 1,
@@ -41,8 +43,8 @@ export default function NewsPage() {
             <ArrowLeft className="w-5 h-5 text-zinc-400" />
           </Link>
           <div className="flex flex-col items-center">
-            <h1 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Imperial Archive</h1>
-            <span className="text-xs font-bold text-white tracking-widest">SYSTEM UPDATES</span>
+            <h1 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">{t('news.archive')}</h1>
+            <span className="text-xs font-bold text-white tracking-widest">{t('news.system_updates')}</span>
           </div>
           <Bell className="w-5 h-5 text-accent-cyan" />
         </div>
@@ -57,11 +59,11 @@ export default function NewsPage() {
           <div className="relative z-10">
             <div className="flex items-center gap-2 mb-2">
               <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-              <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Live Broadcast</span>
+              <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">{t('news.live_broadcast')}</span>
             </div>
-            <h2 className="text-2xl font-black italic tracking-tighter mb-2">COMMUNITY CHRONICLE</h2>
+            <h2 className="text-2xl font-black italic tracking-tighter mb-2">{t('news.community_chronicle')}</h2>
             <p className="text-xs text-zinc-500 leading-relaxed max-w-[240px]">
-              Stay synchronized with the latest logistical directives and empire expansions.
+              {t('news.chronicle_desc')}
             </p>
           </div>
         </div>
@@ -104,7 +106,7 @@ export default function NewsPage() {
               <div className="flex items-center justify-between pt-4 border-t border-white/5">
                 <span className="text-[9px] font-mono text-zinc-600 uppercase">Archive ID: #{update.id.toString().padStart(4, '0')}</span>
                 <button className="flex items-center gap-1 text-[10px] font-black uppercase tracking-tighter text-zinc-400 hover:text-white transition-colors">
-                  Details <ChevronRight className="w-3 h-3" />
+                  {t('news.details')} <ChevronRight className="w-3 h-3" />
                 </button>
               </div>
 
@@ -119,8 +121,8 @@ export default function NewsPage() {
           <div className="flex items-center gap-3">
             <Zap className="w-4 h-4 text-emerald-500" />
             <div className="space-y-0.5">
-              <p className="text-[10px] font-black uppercase text-white">Central Node Online</p>
-              <p className="text-[8px] font-mono text-emerald-500 uppercase">Uptime: 99.99%</p>
+              <p className="text-[10px] font-black uppercase text-white">{t('news.system_status')}</p>
+              <p className="text-[8px] font-mono text-emerald-500 uppercase">{t('news.uptime')}: 99.99%</p>
             </div>
           </div>
           <span className="text-[8px] font-mono text-zinc-600">v1.2.4-stable</span>

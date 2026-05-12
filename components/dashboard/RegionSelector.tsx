@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { motion } from 'motion/react';
 import { Globe, MapPin, ChevronRight, Loader2, Target } from 'lucide-react';
 import WorldSVGMap from './WorldSVGMap';
+import { useTranslation } from 'react-i18next';
 
 interface Region {
   id: string;
@@ -13,16 +14,17 @@ interface Region {
   accent: string;
 }
 
-const REGIONS: Region[] = [
-  { id: 'middle_east', name: 'Middle East', description: 'Oil-rich hub of ancient trade routes.', color: 'bg-orange-500/10', accent: 'border-orange-500/40' },
-  { id: 'africa', name: 'Africa', description: 'Emerging frontier of resources and iron.', color: 'bg-emerald-500/10', accent: 'border-emerald-500/40' },
-  { id: 'europe', name: 'Europe', description: 'Technical powerhouse with stable wheat markets.', color: 'bg-blue-500/10', accent: 'border-blue-500/40' },
-  { id: 'asia', name: 'Asia', description: 'The sprawling gold standard of industry.', color: 'bg-red-500/10', accent: 'border-red-500/40' },
-  { id: 'east_asia', name: 'East Asia', description: 'High-tech district with soaring valuations.', color: 'bg-purple-500/10', accent: 'border-purple-500/40' },
-];
-
 export default function RegionSelector({ onSelect }: { onSelect: (regionId: string) => void }) {
+  const { t } = useTranslation();
   const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
+
+  const REGIONS: Region[] = useMemo(() => [
+    { id: 'middle_east', name: t('regions.middle_east'), description: t('onboarding.region_me_desc'), color: 'bg-orange-500/10', accent: 'border-orange-500/40' },
+    { id: 'africa', name: t('regions.africa'), description: t('onboarding.region_af_desc'), color: 'bg-emerald-500/10', accent: 'border-emerald-500/40' },
+    { id: 'europe', name: t('regions.europe'), description: t('onboarding.region_eu_desc'), color: 'bg-blue-500/10', accent: 'border-blue-500/40' },
+    { id: 'asia', name: t('regions.asia'), description: t('onboarding.region_as_desc'), color: 'bg-red-500/10', accent: 'border-red-500/40' },
+    { id: 'east_asia', name: t('regions.east_asia'), description: t('onboarding.region_ea_desc'), color: 'bg-purple-500/10', accent: 'border-purple-500/40' },
+  ], [t]);
 
   return (
     <div className="absolute inset-0 z-[100] bg-industrial-bg flex flex-col p-6 overflow-y-auto">
@@ -33,11 +35,17 @@ export default function RegionSelector({ onSelect }: { onSelect: (regionId: stri
       >
         <div className="flex items-center gap-2 text-accent-cyan mb-2">
           <Globe className="w-5 h-5" />
-          <span className="text-xs font-mono tracking-[0.3em] font-bold">INITIATING ONBOARDING</span>
+          <span className="text-xs font-mono tracking-[0.3em] font-bold">{t('onboarding.initiating')}</span>
         </div>
-        <h1 className="text-3xl font-black tracking-tighter text-white">SELECT YOUR <span className="text-accent-cyan">EMPIRE</span></h1>
+        <h1 className="text-3xl font-black tracking-tighter text-white">
+          {t('onboarding.title').split('<span>').map((part, idx) => 
+            part.includes('</span>') ? (
+              <span key={idx} className="text-accent-cyan">{part.replace('</span>', '')}</span>
+            ) : part
+          )}
+        </h1>
         <p className="text-zinc-500 text-sm leading-relaxed">
-          Your starting region determines your initial resource bonuses. Choose your sector to begin.
+          {t('onboarding.desc')}
         </p>
       </motion.div>
 
@@ -83,7 +91,7 @@ export default function RegionSelector({ onSelect }: { onSelect: (regionId: stri
 
       <div className="mt-auto pt-8 border-t border-white/5">
         <div className="text-[8px] font-mono text-zinc-600 uppercase tracking-widest text-center">
-          Authorization required from the Council of Five • Permanent Sector Assignation
+          {t('onboarding.auth')}
         </div>
       </div>
     </div>

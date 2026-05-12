@@ -2,24 +2,28 @@
 
 import { motion } from 'motion/react';
 import { Globe, Users, Factory, Coins, ShieldAlert, Crown, ArrowDown, ArrowUp } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { useTranslation } from 'react-i18next';
 
 import { calculateResourcePrice, PRICE_LOT_SIZE } from '@/lib/marketUtils';
 
-const REGION_META: Record<string, any> = {
-  middle_east: { name: 'Middle East', primary: 'Oil', color: 'accent-cyan' },
-  asia: { name: 'Asia', primary: 'Gold', color: 'accent-blue' },
-  africa: { name: 'Africa', primary: 'Iron', color: 'accent-orange' },
-  europe: { name: 'Europe', primary: 'Wheat', color: 'text-purple-400' },
-};
-
 export default function RegionEconomySection({ regionId }: { regionId: string }) {
+  const { t } = useTranslation();
   const [citizenCount, setCitizenCount] = useState(0);
   const [regionalTreasury, setRegionalTreasury] = useState({ oil: 0, gold: 0, iron: 0, wheat: 0, ton: 0 });
   const [overlord, setOverlord] = useState('The Overlord');
   const [totalRegionalYield, setTotalRegionalYield] = useState(0);
-  const region = REGION_META[regionId] || { name: 'Unknown Sector', primary: 'General', color: 'zinc-500' };
+  const region = useMemo(() => {
+    switch (regionId) {
+      case 'middle_east': return { name: t('regions.middle_east'), primary: t('dash.resources.oil'), color: 'accent-cyan' };
+      case 'asia': return { name: t('regions.asia'), primary: t('dash.resources.gold'), color: 'accent-blue' };
+      case 'africa': return { name: t('regions.africa'), primary: t('dash.resources.iron'), color: 'accent-orange' };
+      case 'europe': return { name: t('regions.europe'), primary: t('dash.resources.wheat'), color: 'text-purple-400' };
+      case 'east_asia': return { name: t('regions.east_asia'), primary: 'High-Tech', color: 'accent-purple' };
+      default: return { name: t('regions.neutral'), primary: 'General', color: 'zinc-500' };
+    }
+  }, [regionId, t]);
 
   useEffect(() => {
     const fetchRegionStats = async () => {
@@ -111,9 +115,9 @@ export default function RegionEconomySection({ regionId }: { regionId: string })
       <div className="flex flex-col gap-1">
         <h2 className="text-2xl font-black uppercase tracking-tighter flex items-center gap-2">
           <Globe className="w-6 h-6 text-accent-cyan" />
-          {region.name} Economy
+          {t('eco.title', { name: region.name })}
         </h2>
-        <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest">Macro-Economic Sector Analysis</p>
+        <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest">{t('eco.subtitle')}</p>
       </div>
 
       {/* Main Stats Grid */}
@@ -121,19 +125,19 @@ export default function RegionEconomySection({ regionId }: { regionId: string })
         <div className="tech-card bg-zinc-900/40 p-4 border-white/5 space-y-2">
           <div className="flex justify-between items-center text-zinc-500">
             <Users className="w-4 h-4" />
-            <span className="text-[9px] font-mono">POPULATION</span>
+            <span className="text-[9px] font-mono">{t('eco.pop')}</span>
           </div>
           <div className="text-2xl font-black">{citizenCount.toLocaleString()}</div>
-          <div className="text-[9px] font-mono text-emerald-500">ACTIVE CITIZENS</div>
+          <div className="text-[9px] font-mono text-emerald-500">{t('eco.active')}</div>
         </div>
 
         <div className="tech-card bg-zinc-900/40 p-4 border-white/5 space-y-2">
           <div className="flex justify-between items-center text-zinc-500">
             <Factory className="w-4 h-4" />
-            <span className="text-[9px] font-mono">YIELD</span>
+            <span className="text-[9px] font-mono">{t('eco.yield')}</span>
           </div>
           <div className="text-2xl font-black">{(totalRegionalYield / 1000).toFixed(1)}k</div>
-          <div className="text-[9px] font-mono text-accent-cyan">TOTAL HOURLY {region.primary.toUpperCase()}</div>
+          <div className="text-[9px] font-mono text-accent-cyan">{t('eco.total_hourly', { resource: region.primary.toUpperCase() })}</div>
         </div>
       </div>
 
@@ -144,8 +148,8 @@ export default function RegionEconomySection({ regionId }: { regionId: string })
           <div className="flex items-center gap-2">
             <Coins className="w-5 h-5 text-accent-orange" />
             <div>
-              <h3 className="text-sm font-black uppercase">{region.primary} Market Price</h3>
-              <p className="text-[9px] font-mono text-zinc-500">Fluctuating based on Global Supply</p>
+              <h3 className="text-sm font-black uppercase">{t('eco.market_price', { resource: region.primary })}</h3>
+              <p className="text-[9px] font-mono text-zinc-500">{t('eco.fluctuating')}</p>
             </div>
           </div>
           <div className="text-right">
@@ -160,8 +164,8 @@ export default function RegionEconomySection({ regionId }: { regionId: string })
         {/* Simple Progress Bar as "Supply Meter" */}
         <div className="space-y-1">
           <div className="flex justify-between text-[8px] font-mono text-zinc-600 uppercase">
-            <span>Critical Scarcity</span>
-            <span>Oversupply</span>
+            <span>{t('eco.scarcity')}</span>
+            <span>{t('eco.oversupply')}</span>
           </div>
           <div className="h-1 bg-zinc-800 rounded-full overflow-hidden">
             <motion.div 
@@ -178,19 +182,19 @@ export default function RegionEconomySection({ regionId }: { regionId: string })
         <div className="bento-card p-4 space-y-2 opacity-50 border-white/5">
           <div className="flex justify-between items-center text-zinc-500">
             <ShieldAlert className="w-4 h-4" />
-            <span className="text-[9px] font-mono uppercase tracking-tighter">MILITARY POWER</span>
+            <span className="text-[9px] font-mono uppercase tracking-tighter">{t('eco.military_power')}</span>
           </div>
-          <div className="text-sm font-bold uppercase italic text-zinc-500">Season 2</div>
-          <p className="text-[8px] text-zinc-600">Strategic deployment pending</p>
+          <div className="text-sm font-bold uppercase italic text-zinc-500">{t('eco.season_2')}</div>
+          <p className="text-[8px] text-zinc-600">{t('eco.deployment_pending')}</p>
         </div>
 
         <div className="bento-card p-4 space-y-2 border-white/5">
           <div className="flex justify-between items-center text-zinc-500">
             <Crown className="w-4 h-4 text-accent-cyan" />
-            <span className="text-[9px] font-mono uppercase tracking-tighter">GOVERNANCE</span>
+            <span className="text-[9px] font-mono uppercase tracking-tighter">{t('eco.governance')}</span>
           </div>
           <div className="text-sm font-bold uppercase text-white truncate">{overlord}</div>
-          <p className="text-[8px] text-zinc-500">Term: Permanent</p>
+          <p className="text-[8px] text-zinc-500">{t('eco.term')}</p>
         </div>
       </div>
 
@@ -199,26 +203,26 @@ export default function RegionEconomySection({ regionId }: { regionId: string })
         <div className="flex justify-between items-center bg-black/40 p-3 rounded-xl border border-white/5">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-accent-cyan animate-pulse"></div>
-            <span className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">Imperial Strategic Reserves</span>
+            <span className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">{t('eco.reserves_title')}</span>
           </div>
           <span className="text-accent-orange font-mono text-[10px]">{regionalTreasury.ton.toFixed(2)} TON</span>
         </div>
         
         <div className="grid grid-cols-4 gap-3">
           <div className="text-center group">
-            <div className="text-[8px] text-zinc-600 mb-1">RESERVE OIL</div>
+            <div className="text-[8px] text-zinc-600 mb-1">{t('eco.reserve_oil')}</div>
             <div className="text-xs font-black text-white">{regionalTreasury.oil.toLocaleString()}</div>
           </div>
           <div className="text-center group">
-            <div className="text-[8px] text-zinc-600 mb-1">RESERVE GLD</div>
+            <div className="text-[8px] text-zinc-600 mb-1">{t('eco.reserve_gold')}</div>
             <div className="text-xs font-black text-white">{regionalTreasury.gold.toLocaleString()}</div>
           </div>
           <div className="text-center group">
-            <div className="text-[8px] text-zinc-600 mb-1">RESERVE IRN</div>
+            <div className="text-[8px] text-zinc-600 mb-1">{t('eco.reserve_iron')}</div>
             <div className="text-xs font-black text-white">{regionalTreasury.iron.toLocaleString()}</div>
           </div>
           <div className="text-center group">
-            <div className="text-[8px] text-zinc-600 mb-1">RESERVE WHT</div>
+            <div className="text-[8px] text-zinc-600 mb-1">{t('eco.reserve_wheat')}</div>
             <div className="text-xs font-black text-white">{regionalTreasury.wheat.toLocaleString()}</div>
           </div>
         </div>
@@ -228,7 +232,7 @@ export default function RegionEconomySection({ regionId }: { regionId: string })
       <div className="p-4 bg-blue-500/5 border border-blue-500/20 rounded-2xl flex gap-3 italic">
         <span className="text-blue-400 text-xs text-center font-bold">!</span>
         <p className="text-[10px] text-blue-400 leading-tight">
-          Sovereign production is automatically deposited into the Reserves every hour based on citizen deployment. Regional assets fund imperial defense.
+          {t('eco.notice')}
         </p>
       </div>
     </div>
