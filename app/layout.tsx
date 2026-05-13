@@ -33,6 +33,10 @@ export default function RootLayout({
           src="https://telegram.org/js/telegram-web-app.js"
           strategy="beforeInteractive"
         />
+        <Script
+          src="https://sad.adsgram.ai/js/sad.min.js"
+          strategy="afterInteractive"
+        />
       </head>
       <body
         className={`${inter.variable} ${jetbrainsMono.variable} antialiased bg-industrial-bg text-[#E0E0E0] h-screen overflow-hidden`}

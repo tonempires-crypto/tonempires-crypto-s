@@ -49,6 +49,7 @@ export default function TasksSection({ userData, resources, onResourcesUpdate }:
   const INTERACTIVE_TASKS = [
     { id: 'daily_login', title: t('tasks.daily_login'), reward: '5 WHT', platform: 'Empire', icon: Zap, link: '#' },
     { id: 'watch_briefing', title: t('tasks.briefing'), reward: '15 ALL', platform: 'YouTube', icon: Play, link: 'https://www.youtube.com/@TonEmpires' },
+    { id: 'watch_ad', title: t('tasks.watch_ad'), reward: '5 ALL', platform: 'AdsGram', icon: Video, link: 'adsgram' },
   ];
 
   const ONE_TIME_TASKS = [
@@ -123,6 +124,36 @@ export default function TasksSection({ userData, resources, onResourcesUpdate }:
   const handleTaskClick = async (task: any) => {
     if (completedTasks.includes(task.id)) return;
     
+    // AdsGram Integration
+    if (task.id === 'watch_ad') {
+      const adsgram = (window as any).Adsgram;
+      if (!adsgram) {
+        alert("Ad protocol not initialized. Please refresh.");
+        return;
+      }
+
+      setClaiming(task.id);
+      try {
+        const AdController = adsgram.init({ blockId: "30143" });
+        const result = await AdController.show();
+        
+        if (result.done) {
+          // Success! Reward user
+          await completeTask(task);
+        } else {
+          alert("Ad session interrupted. No rewards issued.");
+        }
+      } catch (error: any) {
+        console.error("AdsGram Error:", error);
+        if (error?.description !== 'User skip ad') {
+          alert("Signal lost during ad transmission.");
+        }
+      } finally {
+        setClaiming(null);
+      }
+      return;
+    }
+    
     // Auto-verify Link Wallet
     if (task.id === 'link_wallet') {
       // Wallet check logic would go here, for now we let them claim if they try
@@ -138,74 +169,84 @@ export default function TasksSection({ userData, resources, onResourcesUpdate }:
     
     // Simulate verification delay
     setTimeout(async () => {
-      try {
-        const isDaily = DAILY_TASKS.some(dt => dt.id === task.id) || INTERACTIVE_TASKS.some(it => it.id === task.id);
-        const newRes = { ...resources };
-        
-        // Rewards logic
-        if (isDaily) {
-          if (task.reward.includes('WHT')) newRes.wheat = (newRes.wheat || 0) + parseInt(task.reward);
-          else if (task.reward.includes('ALL')) {
-             const amount = parseInt(task.reward) || 10;
-             newRes.oil = (newRes.oil || 0) + amount;
-             newRes.gold = (newRes.gold || 0) + amount;
-             newRes.iron = (newRes.iron || 0) + amount;
-             newRes.wheat = (newRes.wheat || 0) + amount;
-          }
-        } else {
-          const amount = parseInt(task.reward) || 10;
-          newRes.oil = (newRes.oil || 0) + amount;
-          newRes.gold = (newRes.gold || 0) + amount;
-          newRes.iron = (newRes.iron || 0) + amount;
-          newRes.wheat = (newRes.wheat || 0) + amount;
-        }
-
-        // 1. Update Resources
-        const { error: resError } = await supabase
-          .from('user_resources')
-          .update({
-            oil: newRes.oil,
-            gold: newRes.gold,
-            iron: newRes.iron,
-            wheat: newRes.wheat
-          })
-          .eq('telegram_id', userData.telegram_id);
-
-        if (resError) throw resError;
-
-        // 2. Track Completion
-        const timestamp = new Date().toISOString();
-        const { error: taskError } = await supabase
-          .from('user_tasks')
-          .upsert({
-            telegram_id: userData.telegram_id,
-            task_id: task.id,
-            completed_at: timestamp
-          }, { onConflict: 'telegram_id,task_id' });
-
-        if (taskError) {
-          console.error("Task log failed:", taskError);
-        }
-
-        // Update local cache
-        const localCache = JSON.parse(localStorage.getItem(`tasks_${userData.telegram_id}`) || '{}');
-        localCache[task.id] = new Date().getTime();
-        localStorage.setItem(`tasks_${userData.telegram_id}`, JSON.stringify(localCache));
-
-        setCompletedTasks(prev => [...prev, task.id]);
-        onResourcesUpdate(newRes);
-        
-        // Haptic feedback
-        if (typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.HapticFeedback) {
-          (window as any).Telegram.WebApp.HapticFeedback.notificationOccurred('success');
-        }
-
-      } catch (e) {
-        console.error("Task Completion Error", e);
-      } finally {
-        setClaiming(null);
-      }
+      await completeTask(task);
     }, 2000); // 2 second "verification" simulation
+  };
+
+  const completeTask = async (task: any) => {
+    try {
+      const isDaily = DAILY_TASKS.some(dt => dt.id === task.id) || INTERACTIVE_TASKS.some(it => it.id === task.id);
+      const newRes = { ...resources };
+      
+      // Rewards logic
+      if (task.id === 'watch_ad') {
+        const amount = 5;
+        newRes.oil = (newRes.oil || 0) + amount;
+        newRes.gold = (newRes.gold || 0) + amount;
+        newRes.iron = (newRes.iron || 0) + amount;
+        newRes.wheat = (newRes.wheat || 0) + amount;
+      } else if (isDaily) {
+        if (task.reward.includes('WHT')) newRes.wheat = (newRes.wheat || 0) + parseInt(task.reward);
+        else if (task.reward.includes('ALL')) {
+           const amount = parseInt(task.reward) || 10;
+           newRes.oil = (newRes.oil || 0) + amount;
+           newRes.gold = (newRes.gold || 0) + amount;
+           newRes.iron = (newRes.iron || 0) + amount;
+           newRes.wheat = (newRes.wheat || 0) + amount;
+        }
+      } else {
+        const amount = parseInt(task.reward) || 10;
+        newRes.oil = (newRes.oil || 0) + amount;
+        newRes.gold = (newRes.gold || 0) + amount;
+        newRes.iron = (newRes.iron || 0) + amount;
+        newRes.wheat = (newRes.wheat || 0) + amount;
+      }
+
+      // 1. Update Resources
+      const { error: resError } = await supabase
+        .from('user_resources')
+        .update({
+          oil: newRes.oil,
+          gold: newRes.gold,
+          iron: newRes.iron,
+          wheat: newRes.wheat
+        })
+        .eq('telegram_id', userData.telegram_id);
+
+      if (resError) throw resError;
+
+      // 2. Track Completion
+      const timestamp = new Date().toISOString();
+      const { error: taskError } = await supabase
+        .from('user_tasks')
+        .upsert({
+          telegram_id: userData.telegram_id,
+          task_id: task.id,
+          completed_at: timestamp
+        }, { onConflict: 'telegram_id,task_id' });
+
+      if (taskError) {
+        console.error("Task log failed:", taskError);
+      }
+
+      // Update local cache
+      const localCache = JSON.parse(localStorage.getItem(`tasks_${userData.telegram_id}`) || '{}');
+      localCache[task.id] = new Date().getTime();
+      localStorage.setItem(`tasks_${userData.telegram_id}`, JSON.stringify(localCache));
+
+      setCompletedTasks(prev => [...prev, task.id]);
+      onResourcesUpdate(newRes);
+      
+      // Haptic feedback
+      if (typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.HapticFeedback) {
+        (window as any).Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+      }
+
+    } catch (e) {
+      console.error("Task Completion Error", e);
+    } finally {
+      setClaiming(null);
+    }
   };
 
   const renderTask = (task: any, index: number) => {
