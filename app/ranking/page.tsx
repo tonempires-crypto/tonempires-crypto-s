@@ -11,6 +11,7 @@ export default function RankingPage() {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [activeMode, setActiveMode] = useState<'individual' | 'empire'>('individual');
+  const [empireSubMode, setEmpireSubMode] = useState<'population' | 'economy' | 'military'>('population');
   const [rankings, setRankings] = useState<any[]>([]);
   const [regionRankings, setRegionRankings] = useState<any[]>([]);
   const [myRankInfo, setMyRankInfo] = useState<any>(null);
@@ -116,12 +117,7 @@ export default function RankingPage() {
         }
       });
 
-      const empireList = Object.values(regionsMap).map(r => {
-        // Total Empire Score = (Pop * 1000) + Mil + Econ
-        const score = (r.population * 1000) + r.military + r.economy;
-        return { ...r, score };
-      }).sort((a, b) => b.score - a.score);
-
+      const empireList = Object.values(regionsMap);
       setRegionRankings(empireList);
 
       // Individual Sort
@@ -210,6 +206,24 @@ export default function RankingPage() {
   };
 
   const renderRegionItem = (region: any, index: number) => {
+    let metricValue: string | number = "";
+    let metricLabel = "";
+    let MetricIcon = Users;
+
+    if (empireSubMode === 'population') {
+      metricValue = region.population.toLocaleString();
+      metricLabel = t('ranking.population');
+      MetricIcon = Users;
+    } else if (empireSubMode === 'economy') {
+      metricValue = Math.floor(region.economy).toLocaleString();
+      metricLabel = t('ranking.economy');
+      MetricIcon = TrendingUp;
+    } else if (empireSubMode === 'military') {
+      metricValue = "???";
+      metricLabel = t('ranking.military');
+      MetricIcon = Shield;
+    }
+
     return (
       <motion.div
         key={region.id}
@@ -218,6 +232,13 @@ export default function RankingPage() {
         transition={{ delay: index * 0.1 }}
         className="bg-zinc-900/50 border border-white/5 p-5 rounded-2xl mb-4 relative overflow-hidden group"
       >
+        {empireSubMode === 'military' && (
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] z-20 flex items-center justify-center">
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-accent-cyan/80 bg-black/80 px-4 py-2 rounded-full border border-accent-cyan/20">
+              {t('ranking.coming_soon')}
+            </span>
+          </div>
+        )}
         <div className="flex items-center justify-between relative z-10">
           <div className="flex items-center gap-4">
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black italic border
@@ -234,12 +255,12 @@ export default function RankingPage() {
               </span>
               <div className="flex items-center gap-3 mt-1">
                 <div className="flex items-center gap-1">
-                  <Users className="w-2.5 h-2.5 text-zinc-500" />
-                  <span className="text-[10px] font-mono text-zinc-400">{region.population}</span>
+                  <Users className={`w-2.5 h-2.5 ${empireSubMode === 'population' ? 'text-accent-cyan' : 'text-zinc-500'}`} />
+                  <span className={`text-[10px] font-mono ${empireSubMode === 'population' ? 'text-white' : 'text-zinc-400'}`}>{region.population}</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <TrendingUp className="w-2.5 h-2.5 text-accent-cyan" />
-                  <span className="text-[10px] font-mono text-zinc-400">{Math.floor(region.economy).toLocaleString()}</span>
+                  <TrendingUp className={`w-2.5 h-2.5 ${empireSubMode === 'economy' ? 'text-accent-cyan' : 'text-zinc-500'}`} />
+                  <span className={`text-[10px] font-mono ${empireSubMode === 'economy' ? 'text-white' : 'text-zinc-400'}`}>{Math.floor(region.economy).toLocaleString()}</span>
                 </div>
               </div>
             </div>
@@ -247,12 +268,12 @@ export default function RankingPage() {
 
           <div className="text-right">
             <div className="flex items-center justify-end gap-1">
-              <Shield className="w-3 h-3 text-accent-cyan" />
+              <MetricIcon className="w-3 h-3 text-accent-cyan" />
               <span className="text-sm font-black italic text-white">
-                {Math.floor(region.score / 1000).toLocaleString()}
+                {metricValue}
               </span>
             </div>
-            <span className="text-[8px] font-mono text-zinc-600 uppercase tracking-widest leading-none mt-1">{t('ranking.status_level')}</span>
+            <span className="text-[8px] font-mono text-zinc-600 uppercase tracking-widest leading-none mt-1">{metricLabel}</span>
           </div>
         </div>
 
@@ -312,6 +333,42 @@ export default function RankingPage() {
               {t('ranking.empires')}
             </button>
           </div>
+
+          {activeMode === 'empire' && (
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-center gap-2 mt-4"
+            >
+              <button 
+                onClick={() => setEmpireSubMode('population')}
+                className={`flex-1 py-2 rounded-lg text-[8px] font-black uppercase tracking-[0.15em] transition-all border
+                  ${empireSubMode === 'population' 
+                    ? 'bg-white/10 border-accent-cyan text-accent-cyan' 
+                    : 'bg-transparent border-white/5 text-zinc-500'}`}
+              >
+                {t('ranking.population')}
+              </button>
+              <button 
+                onClick={() => setEmpireSubMode('economy')}
+                className={`flex-1 py-2 rounded-lg text-[8px] font-black uppercase tracking-[0.15em] transition-all border
+                  ${empireSubMode === 'economy' 
+                    ? 'bg-white/10 border-accent-cyan text-accent-cyan' 
+                    : 'bg-transparent border-white/5 text-zinc-500'}`}
+              >
+                {t('ranking.economy')}
+              </button>
+              <button 
+                onClick={() => setEmpireSubMode('military')}
+                className={`flex-1 py-2 rounded-lg text-[8px] font-black uppercase tracking-[0.15em] transition-all border
+                  ${empireSubMode === 'military' 
+                    ? 'bg-white/10 border-accent-cyan text-accent-cyan' 
+                    : 'bg-transparent border-white/5 text-zinc-500'}`}
+              >
+                {t('ranking.military')}
+              </button>
+            </motion.div>
+          )}
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 pb-32 custom-scrollbar">
@@ -338,7 +395,13 @@ export default function RankingPage() {
               {activeMode === 'individual' ? (
                 rankings.slice(0, 50).map((item, i) => renderRankItem(item, i))
               ) : (
-                regionRankings.map((region, i) => renderRegionItem(region, i))
+                [...regionRankings]
+                  .sort((a, b) => {
+                    if (empireSubMode === 'population') return b.population - a.population;
+                    if (empireSubMode === 'economy') return b.economy - a.economy;
+                    return 0; // military unsorted for now as it is coming soon
+                  })
+                  .map((region, i) => renderRegionItem(region, i))
               )}
             </>
           )}

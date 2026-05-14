@@ -39,6 +39,8 @@ export default function TasksSection({ userData, resources, onResourcesUpdate }:
   const [completedTasks, setCompletedTasks] = useState<string[]>([]);
 
   const DAILY_TASKS = [
+    { id: 'daily_login', title: t('tasks.daily_login'), reward: '5 WHT', platform: 'Empire', icon: Zap, link: '#' },
+    { id: 'watch_briefing', title: t('tasks.briefing'), reward: '15 ALL', platform: 'YouTube', icon: Play, link: 'https://www.youtube.com/@TonEmpires' },
     { id: 'retweet_x', title: t('tasks.retweet_x'), reward: '10 ALL', platform: 'X', icon: Twitter, link: 'https://x.com/Ton_Empires' },
     { id: 'react_tg', title: t('tasks.react_tg'), reward: '10 ALL', platform: 'Telegram', icon: Send, link: 'https://t.me/T0NEmpires' },
     { id: 'react_tiktok', title: t('tasks.react_tiktok'), reward: '10 ALL', platform: 'TikTok', icon: Video, link: 'https://www.tiktok.com/@tonempires' },
@@ -47,8 +49,6 @@ export default function TasksSection({ userData, resources, onResourcesUpdate }:
   ];
 
   const INTERACTIVE_TASKS = [
-    { id: 'daily_login', title: t('tasks.daily_login'), reward: '5 WHT', platform: 'Empire', icon: Zap, link: '#' },
-    { id: 'watch_briefing', title: t('tasks.briefing'), reward: '15 ALL', platform: 'YouTube', icon: Play, link: 'https://www.youtube.com/@TonEmpires' },
     { id: 'watch_ad', title: t('tasks.watch_ad'), reward: '5 ALL', platform: 'AdsGram', icon: Video, link: 'adsgram' },
   ];
 
@@ -87,7 +87,14 @@ export default function TasksSection({ userData, resources, onResourcesUpdate }:
         const startOfToday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).getTime();
 
         completed = data.filter(t => {
-          const isDaily = DAILY_TASKS.some(dt => dt.id === t.task_id) || INTERACTIVE_TASKS.some(it => it.id === t.task_id);
+          // Special handling for hourly ad task
+          if (t.task_id === 'watch_ad') {
+            const completedAt = new Date(t.completed_at).getTime();
+            const nowTime = new Date().getTime();
+            return (nowTime - completedAt) < (60 * 60 * 1000); // 1 hour cooldown
+          }
+
+          const isDaily = DAILY_TASKS.some(dt => dt.id === t.task_id);
           if (!isDaily) return true;
           const completedAt = new Date(t.completed_at).getTime();
           return completedAt >= startOfToday;
@@ -103,11 +110,18 @@ export default function TasksSection({ userData, resources, onResourcesUpdate }:
         
         Object.keys(parsed).forEach(tid => {
           if (!completed.includes(tid)) {
-            const isDaily = DAILY_TASKS.some(dt => dt.id === tid) || INTERACTIVE_TASKS.some(it => it.id === tid);
-            if (!isDaily) {
-              completed.push(tid);
-            } else if (parsed[tid] >= startOfToday) {
-              completed.push(tid);
+            if (tid === 'watch_ad') {
+              const nowTime = new Date().getTime();
+              if ((nowTime - parsed[tid]) < (60 * 60 * 1000)) {
+                completed.push(tid);
+              }
+            } else {
+              const isDaily = DAILY_TASKS.some(dt => dt.id === tid);
+              if (!isDaily) {
+                completed.push(tid);
+              } else if (parsed[tid] >= startOfToday) {
+                completed.push(tid);
+              }
             }
           }
         });

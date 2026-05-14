@@ -61,7 +61,11 @@ export const translations = {
         sector: "Sector",
         combat_power: "Combat Power",
         status_level: "Status Level",
-        live_sync: "Live Sync"
+        live_sync: "Live Sync",
+        population: "Population",
+        economy: "Economy",
+        military: "Military",
+        coming_soon: "Coming Soon"
       },
       news: {
         title: "Imperial Signal",
@@ -616,7 +620,11 @@ export const translations = {
         sector: "Secteur",
         combat_power: "Puissance de Combat",
         status_level: "Niveau de Statut",
-        live_sync: "Sync en Direct"
+        live_sync: "Sync en Direct",
+        population: "Population",
+        economy: "Économie",
+        military: "Militaire",
+        coming_soon: "À venir"
       },
       news: {
         title: "Signal Impérial",
@@ -1040,7 +1048,11 @@ export const translations = {
         sector: "Сектор",
         combat_power: "Боевая мощь",
         status_level: "Уровень статуса",
-        live_sync: "Синхронизация в реальном времени"
+        live_sync: "Синхронизация в реальном времени",
+        population: "Население",
+        economy: "Экономика",
+        military: "Военная мощь",
+        coming_soon: "Скоро"
       },
       news: {
         title: "Имперский сигнал",
@@ -1464,7 +1476,11 @@ export const translations = {
         sector: "Sektör",
         combat_power: "Savaş Gücü",
         status_level: "Statü Seviyesi",
-        live_sync: "Canlı Senkronizasyon"
+        live_sync: "Canlı Senkronizasyon",
+        population: "Nüfus",
+        economy: "Ekonomi",
+        military: "Askeri Güç",
+        coming_soon: "Yakında"
       },
       news: {
         title: "İmparatorluk Sinyali",
