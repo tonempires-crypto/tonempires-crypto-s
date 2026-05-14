@@ -98,26 +98,32 @@ export default function RankingPage() {
       });
 
       // 6. Empire (Regional) Calculation
-      const regionsMap: Record<string, any> = {
-        'EUROPE': { id: 'EUROPE', population: 0, military: 0, economy: 0 },
-        'AFRICA': { id: 'AFRICA', population: 0, military: 0, economy: 0 },
-        'MIDDLE_EAST': { id: 'MIDDLE_EAST', population: 0, military: 0, economy: 0 },
-        'ASIA': { id: 'ASIA', population: 0, military: 0, economy: 0 },
-        'EAST_ASIA': { id: 'EAST_ASIA', population: 0, military: 0, economy: 0 },
-      };
+      const { data: regionsInfo } = await supabase.from('regions').select('*');
+      const { data: statsInfo } = await supabase.from('regional_stats').select('*');
 
-      individualData.forEach(p => {
-        if (regionsMap[p.region]) {
-          regionsMap[p.region].population += 1;
-          regionsMap[p.region].military += p.cp;
-          // Economy is sum of wheat, iron, gold, oil + ton_deposited
-          const res = p.resources;
-          const econScore = (res.wheat || 0) + (res.iron || 0) + (res.gold || 0) + (res.oil || 0) + ((res.total_ton_deposited || 0) * 100);
-          regionsMap[p.region].economy += econScore;
-        }
+      const empireList = ['MIDDLE_EAST', 'ASIA', 'AFRICA', 'EUROPE', 'EAST_ASIA'].map(id => {
+        const lowerId = id.toLowerCase();
+        const info = regionsInfo?.find(r => r.id?.toLowerCase() === lowerId) || {};
+        const stats = statsInfo?.find(s => s.region?.toLowerCase() === lowerId) || {};
+        
+        // Accurate Population from the full user dataset
+        const pop = users.filter(u => u.region?.toUpperCase() === id.toUpperCase()).length;
+        
+        // Accurate Economy - Currency Exchange Rate Formula (TON per 1 Local)
+        // Rate = Max(1, (Circulation / TON Deposits)) * Population * 0.01
+        const circ = stats.total_circulation || 0;
+        const ton = info.total_ton_deposited || 0;
+        const rawPrice = ton > 0 ? circ / ton : 1;
+        const rate = Math.max(1, rawPrice) * pop * 0.01;
+
+        return {
+          id: id,
+          population: pop,
+          economy: rate || 0,
+          military: 0 // Coming Soon
+        };
       });
 
-      const empireList = Object.values(regionsMap);
       setRegionRankings(empireList);
 
       // Individual Sort
@@ -215,7 +221,7 @@ export default function RankingPage() {
       metricLabel = t('ranking.population');
       MetricIcon = Users;
     } else if (empireSubMode === 'economy') {
-      metricValue = Math.floor(region.economy).toLocaleString();
+      metricValue = region.economy.toFixed(4);
       metricLabel = t('ranking.economy');
       MetricIcon = TrendingUp;
     } else if (empireSubMode === 'military') {
@@ -260,7 +266,7 @@ export default function RankingPage() {
                 </div>
                 <div className="flex items-center gap-1">
                   <TrendingUp className={`w-2.5 h-2.5 ${empireSubMode === 'economy' ? 'text-accent-cyan' : 'text-zinc-500'}`} />
-                  <span className={`text-[10px] font-mono ${empireSubMode === 'economy' ? 'text-white' : 'text-zinc-400'}`}>{Math.floor(region.economy).toLocaleString()}</span>
+                  <span className={`text-[10px] font-mono ${empireSubMode === 'economy' ? 'text-white' : 'text-zinc-400'}`}>{region.economy.toFixed(4)}</span>
                 </div>
               </div>
             </div>
