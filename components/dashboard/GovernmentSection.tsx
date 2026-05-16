@@ -83,9 +83,9 @@ export default function GovernmentSection({ userData, resources }: GovernmentSec
     if (region) fetchStats();
   }, [region]);
   
-  // Price Formula: (Total TONs deposited) ÷ (Total amount in circulation) 
+  // Price Formula: (Total TONs deposited + 1) ÷ (Total amount in circulation) 
   // Then multiplied by (population * 0.01) for regional scaling
-  const rawPrice = stats.totalCirculation > 0 ? stats.totalTonDeposited / stats.totalCirculation : 0.001;
+  const rawPrice = stats.totalCirculation > 0 ? (stats.totalTonDeposited + 1) / stats.totalCirculation : 0.001;
   const finalPrice = rawPrice * stats.population * 0.01;
 
   const roles = [

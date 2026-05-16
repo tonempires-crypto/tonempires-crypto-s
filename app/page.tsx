@@ -221,8 +221,8 @@ export default function Dashboard() {
             const circ = s?.total_circulation || 0;
             const ton = r.total_ton_deposited || 0;
             
-            // Price Formula: (Total TONs deposited / Total Circulation) * (population * 0.01)
-            const rawPrice = circ > 0 ? ton / circ : 0.001;
+            // Price Formula: ((Total TONs deposited + 1) / Total Circulation) * (population * 0.01)
+            const rawPrice = circ > 0 ? (ton + 1) / circ : 0.001;
             const finalPrice = rawPrice * pop * 0.01;
             
             let currency = 'BTX';

@@ -110,10 +110,10 @@ export default function RankingPage() {
         const pop = users.filter(u => u.region?.toUpperCase() === id.toUpperCase()).length;
         
         // Accurate Economy - Currency Exchange Rate Formula (TON per 1 Local)
-        // Rate = (Total TON Deposits / Total Circulation) * (Population * 0.01)
+        // Rate = ((Total TON Deposits + 1) / Total Circulation) * (Population * 0.01)
         const circ = stats.total_circulation || 0;
         const ton = info.total_ton_deposited || 0;
-        const rawPrice = circ > 0 ? ton / circ : 0.001;
+        const rawPrice = circ > 0 ? (ton + 1) / circ : 0.001;
         const rate = rawPrice * pop * 0.01;
 
         return {
