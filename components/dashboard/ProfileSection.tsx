@@ -228,8 +228,8 @@ export default function ProfileSection({ userData, resources, miningRates, onCla
       const targetRegion = (userData.region || 'middle_east').toLowerCase().trim();
       
       // Calculate clean decimal values for the DB
-      const netBalance = parseFloat(newResources.localCurrency.toFixed(4));
-      const taxAmount = parseFloat(taxDeduction.toFixed(4));
+      const netBalance = parseFloat(newResources.localCurrency.toFixed(5));
+      const taxAmount = parseFloat(taxDeduction.toFixed(5));
 
       // 1. Core RPC Claim (The only way to bypass RLS for the treasury)
       const { error: rpcError } = await supabase.rpc('claim_mining_with_tax', {

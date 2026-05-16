@@ -430,7 +430,7 @@ export default function Dashboard() {
                       className="bg-[#111114] border border-border-main p-3 rounded-2xl relative overflow-hidden group text-left active:scale-95 transition-all"
                     >
                       <div className="text-[9px] text-gray-500 font-mono mb-1">{region.currency} - {region.name.toUpperCase()}</div>
-                      <div className="text-lg font-bold group-hover:text-accent-cyan transition-colors">{region.price.toFixed(4)} TON</div>
+                      <div className="text-lg font-bold group-hover:text-accent-cyan transition-colors">{region.price.toFixed(5)} TON</div>
                       <div className={`text-[9px] font-mono ${region.change.startsWith('+') ? 'text-emerald-500' : region.change === '0.0%' ? 'text-gray-400' : 'text-red-500'}`}>
                         {region.change}
                       </div>
@@ -448,7 +448,7 @@ export default function Dashboard() {
                           {regionalMarketData.find(r => r.id === (userData?.region || 'middle_east'))?.currency} - {t('dash.current_sector')}
                         </div>
                         <div className="text-lg font-bold">
-                          {regionalMarketData.find(r => r.id === (userData?.region || 'middle_east'))?.price.toFixed(4)} TON
+                          {regionalMarketData.find(r => r.id === (userData?.region || 'middle_east'))?.price.toFixed(5)} TON
                         </div>
                       </div>
                       <div className="flex gap-1 items-end">

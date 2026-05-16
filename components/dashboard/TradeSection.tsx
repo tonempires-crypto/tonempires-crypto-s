@@ -298,7 +298,7 @@ export default function TradeSection({ userData, resources, onTradeSuccess }: Tr
             <div className="flex justify-between items-end px-1">
               <span className="text-[10px] font-mono text-zinc-500 uppercase">{t('trade.input_amount')}</span>
               <span className="text-[10px] font-mono text-accent-cyan uppercase">
-                Bal: {swapDirection === 'ton_to_local' ? resources.ton?.toFixed(4) : 
+                Bal: {swapDirection === 'ton_to_local' ? resources.ton?.toFixed(5) : 
                       resources.localCurrency?.toFixed(2)}
               </span>
             </div>
@@ -326,15 +326,15 @@ export default function TradeSection({ userData, resources, onTradeSuccess }: Tr
             <div className="flex justify-between items-end px-1">
               <span className="text-[10px] font-mono text-zinc-500 uppercase">{t('trade.est_recovery')}</span>
               <span className="text-[10px] font-mono text-accent-cyan uppercase">
-                Rate: {swapDirection === 'ton_to_local' ? (1/getExchangeRate()).toFixed(4) + ' L/T' : 
-                       getExchangeRate().toFixed(4) + ' T/L'}
+                Rate: {swapDirection === 'ton_to_local' ? (1/getExchangeRate()).toFixed(5) + ' L/T' : 
+                       getExchangeRate().toFixed(5) + ' T/L'}
               </span>
             </div>
             <div className="flex gap-3 h-14">
               <div className="flex-1 bg-accent-cyan/5 border border-accent-cyan/20 rounded-xl flex items-center px-4 font-mono text-xl text-accent-cyan">
                 {amount ? (
                   swapDirection === 'ton_to_local' ? (parseFloat(amount) / getExchangeRate()).toFixed(2) :
-                  (parseFloat(amount) * getExchangeRate()).toFixed(4)
+                  (parseFloat(amount) * getExchangeRate()).toFixed(5)
                 ) : '0.0000'}
               </div>
               <div className="w-28 bg-zinc-800 border border-white/10 rounded-xl flex items-center justify-center gap-2 text-[10px] font-black uppercase text-accent-orange">
@@ -388,13 +388,13 @@ export default function TradeSection({ userData, resources, onTradeSuccess }: Tr
               <div className="flex justify-between items-center">
                 <span className="text-[9px] font-mono text-zinc-500 uppercase">Current Market Value</span>
                 <span className="text-[10px] font-mono text-accent-cyan font-bold">
-                  {((marketPrices?.[selectedRes] || 0) * 100000).toFixed(4)} TON / 100k
+                  {((marketPrices?.[selectedRes] || 0) * 100000).toFixed(5)} TON / 100k
                 </span>
               </div>
               <div className="flex justify-between items-center mt-2 pt-2 border-t border-white/5">
                 <span className="text-[9px] font-mono text-zinc-400 uppercase">Estimated Yield</span>
                 <span className="text-[12px] font-mono text-white font-black">
-                  {(parseFloat(sellAmount || '0') * (marketPrices?.[selectedRes] || 0)).toFixed(4)} TON
+                  {(parseFloat(sellAmount || '0') * (marketPrices?.[selectedRes] || 0)).toFixed(5)} TON
                 </span>
               </div>
             </div>

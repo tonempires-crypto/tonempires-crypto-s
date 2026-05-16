@@ -221,7 +221,7 @@ export default function RankingPage() {
       metricLabel = t('ranking.population');
       MetricIcon = Users;
     } else if (empireSubMode === 'economy') {
-      metricValue = region.economy.toFixed(4);
+      metricValue = region.economy.toFixed(5);
       metricLabel = t('ranking.economy');
       MetricIcon = TrendingUp;
     } else if (empireSubMode === 'military') {
@@ -266,7 +266,7 @@ export default function RankingPage() {
                 </div>
                 <div className="flex items-center gap-1">
                   <TrendingUp className={`w-2.5 h-2.5 ${empireSubMode === 'economy' ? 'text-accent-cyan' : 'text-zinc-500'}`} />
-                  <span className={`text-[10px] font-mono ${empireSubMode === 'economy' ? 'text-white' : 'text-zinc-400'}`}>{region.economy.toFixed(4)}</span>
+                  <span className={`text-[10px] font-mono ${empireSubMode === 'economy' ? 'text-white' : 'text-zinc-400'}`}>{region.economy.toFixed(5)}</span>
                 </div>
               </div>
             </div>

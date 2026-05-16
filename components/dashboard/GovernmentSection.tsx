@@ -175,7 +175,7 @@ export default function GovernmentSection({ userData, resources }: GovernmentSec
           <TrendingUp className="w-4 h-4 text-accent-cyan" />
           <span className="text-[10px] font-mono text-zinc-500 uppercase">{t('gov.market_value')}</span>
         </div>
-        <div className="text-xl font-black text-accent-cyan">${finalPrice.toFixed(4)}</div>
+        <div className="text-xl font-black text-accent-cyan">${finalPrice.toFixed(5)}</div>
         <div className="text-[9px] text-zinc-600 mt-1 uppercase">{t('gov.ton_indexed')}</div>
       </div>
 
