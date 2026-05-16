@@ -221,10 +221,9 @@ export default function Dashboard() {
             const circ = s?.total_circulation || 0;
             const ton = r.total_ton_deposited || 0;
             
-            // Price Formula: Max(1, (Circulation / TON)) * population * 0.01
-            const rawPrice = ton > 0 ? circ / ton : 1;
-            const basePrice = Math.max(1, rawPrice);
-            const finalPrice = basePrice * pop * 0.01;
+            // Price Formula: (Total TONs deposited / Total Circulation) * (population * 0.01)
+            const rawPrice = circ > 0 ? ton / circ : 0.001;
+            const finalPrice = rawPrice * pop * 0.01;
             
             let currency = 'BTX';
             if (r.id === 'middle_east') currency = 'BTM';

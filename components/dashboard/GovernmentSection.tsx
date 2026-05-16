@@ -83,11 +83,10 @@ export default function GovernmentSection({ userData, resources }: GovernmentSec
     if (region) fetchStats();
   }, [region]);
   
-  // Price Formula: (Total amount mined by citizens) ÷ (Total TONs deposited) 
-  // Minimum 1, then multiplied by population * 0.01
-  const rawPrice = stats.totalTonDeposited > 0 ? stats.totalCirculation / stats.totalTonDeposited : 1;
-  const basePrice = Math.max(1, rawPrice);
-  const finalPrice = basePrice * stats.population * 0.01;
+  // Price Formula: (Total TONs deposited) ÷ (Total amount in circulation) 
+  // Then multiplied by (population * 0.01) for regional scaling
+  const rawPrice = stats.totalCirculation > 0 ? stats.totalTonDeposited / stats.totalCirculation : 0.001;
+  const finalPrice = rawPrice * stats.population * 0.01;
 
   const roles = [
     { title: t('gov.president'), icon: Users, status: t('gov.soon') },

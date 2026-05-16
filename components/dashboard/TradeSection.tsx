@@ -74,16 +74,16 @@ export default function TradeSection({ userData, resources, onTradeSuccess }: Tr
   }, [userData?.region]);
 
   const getExchangeRate = () => {
-    if (!regionStats) return 1;
+    if (!regionStats) return 0.0001;
     const circ = regionStats.total_circulation || 0;
     const ton = regionStats.ton_deposited || 0;
     const pop = regionStats.population || 1;
     
-    // Price Formula: Max(1, (Circulation / TON)) * population * 0.01
-    // This is TON per 1 LOCAL CURRENCY (e.g. 0.02 TON = 1 BTM)
-    const rawPrice = ton > 0 ? circ / ton : 1;
-    const rate = Math.max(1, rawPrice) * pop * 0.01;
-    return rate || 0.001; // Fallback
+    // Price Formula: (Total TONs deposited / Total Circulation) * (population * 0.01)
+    // This defines TON per 1 LOCAL CURRENCY unit (Value backing each coin)
+    const rawPrice = circ > 0 ? ton / circ : 0.0001;
+    const rate = rawPrice * pop * 0.01;
+    return rate || 0.0001; // Minimum floor to prevent division by zero
   };
 
   const handleQuickSwap = async () => {
