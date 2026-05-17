@@ -121,17 +121,20 @@ export default function MilitaryCampPage() {
         
         // Fetch VIP Points
         const { count } = await supabase.from('users').select('*', { count: 'exact', head: true }).eq('referred_by', user.id);
-        const { data: resData } = await supabase.from('user_resources').select('wheat, iron, oil, ton_balance, total_ton_deposited').eq('telegram_id', user.id).maybeSingle();
+        const { data: resData } = await supabase.from('user_resources').select('wheat, iron, oil, total_ton_deposited').eq('telegram_id', user.id).maybeSingle();
         
         if (resData) {
-          setWheatBalance(resData.wheat);
-          setBalances({ iron: resData.iron || 0, oil: resData.oil || 0, ton: resData.ton_balance || 0 });
+          setWheatBalance(resData.wheat || 0);
+          setBalances(prev => ({ ...prev, iron: resData.iron || 0, oil: resData.oil || 0 }));
           setVipPoints(((count || 0) * 100) + Math.floor((resData.total_ton_deposited || 0) * 1000));
         }
 
-        // Fetch User Rank from users table
-        const { data: userData } = await supabase.from('users').select('rank').eq('telegram_id', user.id).maybeSingle();
-        if (userData) setUserRank(parseInt(userData.rank || '1'));
+        // Fetch User Stats from users table (Rank and TON)
+        const { data: userData } = await supabase.from('users').select('rank, ton_balance').eq('telegram_id', user.id).maybeSingle();
+        if (userData) {
+          setUserRank(parseInt(userData.rank || '1'));
+          setBalances(prev => ({ ...prev, ton: userData.ton_balance || 0 }));
+        }
 
         // 1. Fetch Stats
         const { data: milData } = await supabase.from('military_stats').select('*').eq('telegram_id', user.id).maybeSingle();
@@ -165,16 +168,23 @@ export default function MilitaryCampPage() {
 
     setLoading(true);
     try {
-      // 1. Deduct Resources
+      // 1. Deduct Resources (Iron/Oil in user_resources)
       const { error: resError } = await supabase.from('user_resources').update({
         iron: balances.iron - (item.cost.iron || 0),
-        oil: balances.oil - (item.cost.oil || 0),
-        ton_balance: balances.ton - (item.cost.ton || 0)
+        oil: balances.oil - (item.cost.oil || 0)
       }).eq('telegram_id', telegramId);
 
       if (resError) throw resError;
 
-      // 2. Update Inventory (Upsert)
+      // 2. Deduct TON (in users table)
+      if (item.cost.ton && item.cost.ton > 0) {
+        const { error: tonError } = await supabase.from('users').update({
+          ton_balance: balances.ton - item.cost.ton
+        }).eq('telegram_id', telegramId);
+        if (tonError) throw tonError;
+      }
+
+      // 3. Update Inventory (Upsert)
       const currentQty = inventory[item.id] || 0;
       const { error: invError } = await supabase.from('military_inventory').upsert({
         telegram_id: telegramId,
